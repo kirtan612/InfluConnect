@@ -142,5 +142,5 @@ InfluConnect supports **exactly three roles**:
 - Secure JWT-based auth
 
 ## Team
--Kirtan Jogani (Backend)
--Man Dhanani (Frontend)
+- Kirtan Jogani (Backend)
+- Man Dhanani (Frontend)

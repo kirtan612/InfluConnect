@@ -81,8 +81,17 @@ const Hero = () => {
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 bg-brand-indigo rounded-full flex items-center justify-center text-white font-semibold">
-                      JD
+                    <div className="w-10 h-10 bg-brand-indigo rounded-full flex items-center justify-center text-white font-semibold overflow-hidden">
+                      <img 
+                        src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face" 
+                        alt="Jane Doe" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none'
+                          e.target.nextSibling.style.display = 'flex'
+                        }}
+                      />
+                      <span className="hidden">JD</span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
@@ -100,8 +109,17 @@ const Hero = () => {
                   </div>
                   
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-10 h-10 bg-brand-navy rounded-full flex items-center justify-center text-white font-semibold">
-                      MS
+                    <div className="w-10 h-10 bg-brand-navy rounded-full flex items-center justify-center text-white font-semibold overflow-hidden">
+                      <img 
+                        src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face" 
+                        alt="Mike Smith" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none'
+                          e.target.nextSibling.style.display = 'flex'
+                        }}
+                      />
+                      <span className="hidden">MS</span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">

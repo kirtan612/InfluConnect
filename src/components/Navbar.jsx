@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import Logo from './Logo'
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -20,8 +21,8 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex-shrink-0">
-            <Link to="/" className="text-2xl font-bold text-brand-navy">
-              InfluConnect
+            <Link to="/" className="flex items-center">
+              <Logo size="md" />
             </Link>
           </div>
           

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
+import Logo from '../components/Logo'
 
 const SignUp = () => {
   const [email, setEmail] = useState('')
@@ -43,8 +44,8 @@ const SignUp = () => {
           <div className="relative z-10 flex flex-col justify-center px-12 xl:px-16">
             {/* Logo */}
             <div className="mb-12">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 backdrop-blur-sm rounded-xl mb-4">
-                <span className="text-2xl font-bold text-white">IC</span>
+              <div className="mb-4">
+                <Logo size="lg" variant="icon" />
               </div>
               <h1 className="text-4xl font-bold text-white mb-4">
                 Welcome to InfluConnect

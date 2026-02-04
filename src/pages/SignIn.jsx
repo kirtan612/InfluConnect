@@ -1,9 +1,15 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import Logo from '../components/Logo'
 
 const SignIn = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const navigate = useNavigate()
+
+  // Admin credentials
+  const ADMIN_EMAIL = 'man.dhanani@gmail.com'
+  const ADMIN_PASSWORD = 'admin123'
 
   const handleGoogleSignIn = () => {
     // Mock redirect logic
@@ -14,8 +20,21 @@ const SignIn = () => {
 
   const handleEmailSignIn = (e) => {
     e.preventDefault()
-    // Mock redirect logic
-    console.log('Email sign-in:', { email, password })
+    
+    // Check if admin credentials
+    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      // Store admin auth
+      localStorage.setItem('adminAuth', JSON.stringify({
+        email: email,
+        role: 'admin',
+        loginTime: new Date().toISOString()
+      }))
+      navigate('/admin/dashboard')
+      return
+    }
+    
+    // Regular user login
+    console.log('Regular user sign-in:', { email, password })
     // Simulate redirect to dashboard based on user type
     window.location.href = '/company/dashboard' // or '/influencer/dashboard'
   }
@@ -26,8 +45,8 @@ const SignIn = () => {
         <div className="bg-white rounded-xl shadow-lg p-8">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-slate-900 to-slate-700 rounded-xl mb-4">
-              <span className="text-2xl font-bold text-white">IC</span>
+            <div className="mb-4 flex justify-center">
+              <Logo size="lg" variant="icon" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Sign in to InfluConnect</h2>
           </div>

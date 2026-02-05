@@ -65,28 +65,13 @@ const Footer = () => {
           </div>
           
           <div>
-            <h4 className="font-semibold mb-4">Address</h4>
-            <div className="text-gray-300 space-y-2">
-              <div className="flex items-start space-x-2">
-                <svg className="w-4 h-4 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <div>
-                  <p>123 Innovation Drive</p>
-                  <p>Suite 400</p>
-                  <p>San Francisco, CA 94105</p>
-                  <p>United States</p>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4">
-              <h5 className="font-medium mb-2">Business Hours</h5>
-              <div className="text-sm text-gray-300">
-                <p>Mon - Fri: 9:00 AM - 6:00 PM PST</p>
-                <p>Sat - Sun: Closed</p>
-              </div>
-            </div>
+            <h4 className="font-semibold mb-4">Legal</h4>
+            <ul className="space-y-2">
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Privacy Policy</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Terms of Service</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Help Center</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Support</a></li>
+            </ul>
           </div>
         </div>
         

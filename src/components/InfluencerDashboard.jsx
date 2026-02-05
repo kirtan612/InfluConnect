@@ -141,7 +141,7 @@ const MyProfile = () => {
     name: 'Sarah Johnson',
     verified: true,
     category: 'Tech Reviews',
-    platforms: ['Instagram', 'YouTube', 'TikTok'],
+    platforms: ['Instagram', 'YouTube'],
     location: 'San Francisco, CA',
     about: 'Tech reviewer focusing on consumer electronics, software, and emerging technologies. I help my audience make informed decisions about tech products through detailed reviews and comparisons.',
     stats: {
@@ -314,7 +314,7 @@ const MyProfile = () => {
 
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Platforms</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {profile.platforms.map((platform, index) => (
                     <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">

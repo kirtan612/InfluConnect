@@ -8,8 +8,8 @@ const SignIn = () => {
   const navigate = useNavigate()
 
   // Admin credentials
-  const ADMIN_EMAIL = 'man.dhanani@gmail.com'
-  const ADMIN_PASSWORD = 'admin123'
+  const ADMIN_EMAIL = 'mandhanani@gmail.com'
+  const ADMIN_PASSWORD = 'Man@@@17'
 
   const handleGoogleSignIn = () => {
     // Mock redirect logic

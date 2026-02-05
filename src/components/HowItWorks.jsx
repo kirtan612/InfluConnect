@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const HowItWorks = () => {
   const [activeTab, setActiveTab] = useState('companies')
+  const navigate = useNavigate()
 
   const companySteps = [
     {
@@ -106,7 +108,10 @@ const HowItWorks = () => {
         </div>
 
         <div className="mt-16 text-center">
-          <button className={activeTab === 'companies' ? 'btn-primary' : 'btn-teal'}>
+          <button 
+            onClick={() => navigate('/signup')}
+            className={activeTab === 'companies' ? 'btn-primary' : 'btn-teal'}
+          >
             {activeTab === 'companies' ? 'Start Finding Influencers' : 'Apply for Verification'}
           </button>
         </div>

@@ -48,6 +48,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
       <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+<<<<<<< HEAD
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -56,13 +57,27 @@ const AdminDashboard = () => {
               <div className="ml-2 flex items-center space-x-2">
                 <div className="w-px h-6 bg-gray-300"></div>
                 <span className="text-xs font-bold text-gray-800 tracking-wide whitespace-nowrap">
+=======
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center flex-shrink-0">
+              <Logo size="md" />
+              <div className="ml-3 flex items-center space-x-2">
+                <div className="w-px h-6 bg-gray-300"></div>
+                <span className="text-xs font-bold text-gray-800 tracking-wide">
+>>>>>>> 6a5584a9bf5ac7158b21269014d43f9d80c353b0
                   ADMIN CONTROL CENTER
                 </span>
               </div>
             </div>
 
             {/* Navigation Items */}
+<<<<<<< HEAD
             <div className="hidden lg:flex items-center space-x-1 flex-1 px-8">
+=======
+            <div className="hidden lg:flex items-center space-x-1 flex-1 justify-center px-8">
+>>>>>>> 6a5584a9bf5ac7158b21269014d43f9d80c353b0
               {navigation.map((item) => (
                 <button
                   key={item.id}
@@ -79,9 +94,32 @@ const AdminDashboard = () => {
               ))}
             </div>
 
+<<<<<<< HEAD
             {/* Notifications & Admin User Menu */}
             <div className="flex items-center space-x-3 flex-shrink-0">
               <Notifications />
+=======
+            {/* Admin User Menu */}
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-all duration-300 border border-gray-200 hover:border-gray-300 hover:shadow-md"
+              >
+                <div className="w-8 h-8 bg-gradient-to-br from-red-600 via-red-700 to-red-800 rounded-lg flex items-center justify-center shadow-lg">
+                  <span className="text-white text-sm font-bold">A</span>
+                </div>
+                <div className="hidden md:block text-left">
+                  <div className="text-xs font-bold text-gray-900">{adminUser.email}</div>
+                  <div className="text-xs text-red-600 font-semibold flex items-center space-x-1">
+                    <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                    <span>Admin</span>
+                  </div>
+                </div>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+>>>>>>> 6a5584a9bf5ac7158b21269014d43f9d80c353b0
               
               {/* Admin User Menu */}
               <div className="relative">

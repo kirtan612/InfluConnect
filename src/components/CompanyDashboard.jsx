@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Logo from './Logo'
+import Notifications from './Notifications'
 
 const CompanyDashboard = () => {
-  const [activeTab, setActiveTab] = useState('profile')
+  const navigate = useNavigate()
   const [profileComplete, setProfileComplete] = useState(true) // Set to true for demo
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const navigate = useNavigate()
+  
+  // Get tab from URL parameter
+  const urlParams = new URLSearchParams(window.location.search)
+  const tabFromUrl = urlParams.get('tab')
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'profile')
+
+  // Update tab when URL changes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const tab = params.get('tab')
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab)
+    }
+  }, [window.location.search])
 
   const handleLogout = () => {
     navigate('/')
@@ -60,47 +74,52 @@ const CompanyDashboard = () => {
               ))}
             </div>
 
-            {/* User Menu */}
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="w-9 h-9 bg-gradient-to-br from-brand-indigo to-brand-navy rounded-lg flex items-center justify-center overflow-hidden">
-                  <img 
-                    src="https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=36&h=36&fit=crop&crop=face" 
-                    alt="Company Profile" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.style.display = 'none'
-                      e.target.nextSibling.style.display = 'flex'
-                    }}
-                  />
-                  <span className="text-white text-sm font-semibold hidden">AC</span>
-                </div>
-                <div className="hidden md:block text-left">
-                  <div className="text-sm font-medium text-gray-900">Acme Corp</div>
-                  <div className="text-xs text-gray-500">Technology</div>
-                </div>
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+            {/* Notifications & User Menu */}
+            <div className="flex items-center space-x-3">
+              <Notifications />
               
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                  <div className="px-4 py-2 border-b border-gray-100">
-                    <div className="text-sm font-medium text-gray-900">Acme Corporation</div>
-                    <div className="text-xs text-gray-500">acme@company.com</div>
+              {/* User Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="w-9 h-9 bg-gradient-to-br from-brand-indigo to-brand-navy rounded-lg flex items-center justify-center overflow-hidden">
+                    <img 
+                      src="https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=36&h=36&fit=crop&crop=face" 
+                      alt="Company Profile" 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none'
+                        e.target.nextSibling.style.display = 'flex'
+                      }}
+                    />
+                    <span className="text-white text-sm font-semibold hidden">AC</span>
                   </div>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Account Settings</a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Billing</a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Help Center</a>
-                  <div className="border-t border-gray-100 mt-2 pt-2">
-                    <button onClick={handleLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Sign out</button>
+                  <div className="hidden md:block text-left">
+                    <div className="text-sm font-medium text-gray-900">Acme Corp</div>
+                    <div className="text-xs text-gray-500">Technology</div>
                   </div>
-                </div>
-              )}
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <div className="text-sm font-medium text-gray-900">Acme Corporation</div>
+                      <div className="text-xs text-gray-500">acme@company.com</div>
+                    </div>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Account Settings</a>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Billing</a>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Help Center</a>
+                    <div className="border-t border-gray-100 mt-2 pt-2">
+                      <button onClick={handleLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Sign out</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -324,7 +343,7 @@ const DiscoverInfluencers = () => {
       followers: '125K',
       engagement: '4.2%',
       avgViews: '45K',
-      pricing: '$500-1,500',
+      pricing: '₹40,000-1,20,000',
       location: 'San Francisco, CA',
       avatar: 'SJ',
       trustScore: 94,
@@ -334,7 +353,7 @@ const DiscoverInfluencers = () => {
       socialLinks: {
         instagram: 'https://instagram.com/sarahjohnson',
         youtube: 'https://youtube.com/sarahjohnson',
-        twitter: 'https://twitter.com/sarahjohnson'
+        facebook: 'https://facebook.com/sarahjohnson'
       },
       recentPosts: [
         { title: 'iPhone 15 Pro Review', views: '89K', engagement: '5.2%' },
@@ -356,7 +375,7 @@ const DiscoverInfluencers = () => {
       followers: '89K',
       engagement: '5.1%',
       avgViews: '32K',
-      pricing: '$800-2,000',
+      pricing: '₹64,000-1,60,000',
       location: 'New York, NY',
       avatar: 'MC',
       trustScore: 91,
@@ -365,8 +384,8 @@ const DiscoverInfluencers = () => {
       bio: 'Business strategist and entrepreneur sharing insights',
       socialLinks: {
         youtube: 'https://youtube.com/mikechen',
-        linkedin: 'https://linkedin.com/in/mikechen',
-        twitter: 'https://twitter.com/mikechen'
+        facebook: 'https://facebook.com/mikechen',
+        instagram: 'https://instagram.com/mikechen'
       },
       recentPosts: [
         { title: 'Startup Growth Strategies', views: '45K', engagement: '6.2%' },
@@ -382,13 +401,13 @@ const DiscoverInfluencers = () => {
     {
       id: 3,
       name: 'Emma Davis',
-      platform: 'TikTok',
+      platform: 'Instagram',
       verified: true,
       category: 'Lifestyle',
       followers: '200K',
       engagement: '6.8%',
       avgViews: '85K',
-      pricing: '$300-800',
+      pricing: '₹24,000-64,000',
       location: 'Los Angeles, CA',
       avatar: 'ED',
       trustScore: 88,
@@ -396,9 +415,9 @@ const DiscoverInfluencers = () => {
       badges: ['Verified Creator', 'Trending'],
       bio: 'Lifestyle content creator with focus on wellness and productivity',
       socialLinks: {
-        tiktok: 'https://tiktok.com/@emmadavis',
         instagram: 'https://instagram.com/emmadavis',
-        youtube: 'https://youtube.com/emmadavis'
+        youtube: 'https://youtube.com/emmadavis',
+        facebook: 'https://facebook.com/emmadavis'
       },
       recentPosts: [
         { title: 'Morning Routine for Success', views: '120K', engagement: '8.1%' },
@@ -420,7 +439,7 @@ const DiscoverInfluencers = () => {
       followers: '45K',
       engagement: '3.9%',
       avgViews: '12K',
-      pricing: '$1,200-3,000',
+      pricing: '₹96,000-2,40,000',
       location: 'Austin, TX',
       avatar: 'AR',
       trustScore: 96,
@@ -428,9 +447,9 @@ const DiscoverInfluencers = () => {
       badges: ['Verified Creator', 'Industry Expert'],
       bio: 'Marketing executive and thought leader in B2B space',
       socialLinks: {
-        linkedin: 'https://linkedin.com/in/alexrodriguez',
-        twitter: 'https://twitter.com/alexrodriguez',
-        medium: 'https://medium.com/@alexrodriguez'
+        facebook: 'https://facebook.com/alexrodriguez',
+        youtube: 'https://youtube.com/alexrodriguez',
+        instagram: 'https://instagram.com/alexrodriguez'
       },
       recentPosts: [
         { title: 'B2B Marketing Trends 2024', views: '18K', engagement: '4.5%' },
@@ -449,6 +468,22 @@ const DiscoverInfluencers = () => {
     setFilters(prev => ({ ...prev, [key]: value }))
   }
 
+  const filteredInfluencers = influencers.filter(influencer => {
+    if (filters.category !== 'all' && !influencer.category.toLowerCase().includes(filters.category)) return false
+    if (filters.platform !== 'all' && influencer.platform.toLowerCase() !== filters.platform) return false
+    if (filters.location !== 'all') {
+      const locationMap = { sf: 'San Francisco', ny: 'New York', la: 'Los Angeles', austin: 'Austin' }
+      if (!influencer.location.includes(locationMap[filters.location])) return false
+    }
+    return true
+  })
+
+  const sortedInfluencers = [...filteredInfluencers].sort((a, b) => {
+    if (filters.sortBy === 'engagement') return parseFloat(b.engagement) - parseFloat(a.engagement)
+    if (filters.sortBy === 'followers') return parseInt(b.followers) - parseInt(a.followers)
+    return 0
+  })
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -459,7 +494,7 @@ const DiscoverInfluencers = () => {
         </div>
         <div className="flex items-center space-x-3">
           <div className="text-sm text-gray-500">
-            {influencers.length} creators found
+            {sortedInfluencers.length} creators found
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -501,8 +536,7 @@ const DiscoverInfluencers = () => {
                 <option value="all">All Platforms</option>
                 <option value="instagram">Instagram</option>
                 <option value="youtube">YouTube</option>
-                <option value="tiktok">TikTok</option>
-                <option value="linkedin">LinkedIn</option>
+                <option value="facebook">Facebook</option>
               </select>
             </div>
             <div>
@@ -546,7 +580,7 @@ const DiscoverInfluencers = () => {
 
       {/* Influencer Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {influencers.map((influencer) => (
+        {sortedInfluencers.map((influencer) => (
           <div key={influencer.id} className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden group hover:scale-105">
             {/* Card Header */}
             <div className="p-6 pb-4">
@@ -1037,7 +1071,7 @@ const Campaigns = () => {
       name: 'Q4 Product Launch',
       status: 'Active',
       influencers: 5,
-      budget: '$10,000',
+      budget: '₹8,00,000',
       created: '2024-01-15',
       description: 'Launch campaign for our new productivity software',
       category: 'Tech Reviews',
@@ -1049,7 +1083,7 @@ const Campaigns = () => {
       name: 'Brand Awareness Campaign',
       status: 'Planning',
       influencers: 0,
-      budget: '$5,000',
+      budget: '₹4,00,000',
       created: '2024-01-20',
       description: 'Increase brand visibility in the business sector',
       category: 'Business',
@@ -1219,7 +1253,7 @@ const Campaigns = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Target Platforms</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {['Instagram', 'YouTube', 'TikTok', 'LinkedIn'].map((platform) => (
+                  {['Instagram', 'YouTube', 'Facebook'].map((platform) => (
                     <label key={platform} className="flex items-center">
                       <input type="checkbox" className="rounded" />
                       <span className="ml-2 text-sm text-gray-700">{platform}</span>
@@ -1256,7 +1290,7 @@ const Requests = () => {
       platform: 'Instagram',
       followers: '125K',
       message: 'Hi Sarah! We\'d love to collaborate on our new product launch...',
-      pricing: '$500-1,500'
+      pricing: '₹40,000-1,20,000'
     },
     {
       id: 2,
@@ -1268,7 +1302,7 @@ const Requests = () => {
       platform: 'YouTube',
       followers: '89K',
       message: 'Hello Mike! Your business content aligns perfectly with our brand...',
-      pricing: '$800-2,000',
+      pricing: '₹64,000-1,60,000',
       acceptedDate: '2024-01-19'
     },
     {
@@ -1278,10 +1312,10 @@ const Requests = () => {
       status: 'Rejected',
       sent: '2024-01-15',
       avatar: 'ED',
-      platform: 'TikTok',
+      platform: 'Instagram',
       followers: '200K',
       message: 'Hi Emma! We think your lifestyle content would be perfect...',
-      pricing: '$300-800',
+      pricing: '₹24,000-64,000',
       rejectedDate: '2024-01-16',
       rejectionReason: 'Schedule conflict with existing commitments'
     }

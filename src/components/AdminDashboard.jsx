@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Logo from './Logo'
+import Notifications from './Notifications'
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview')
@@ -47,72 +48,77 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
       <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center">
+            <div className="flex items-center flex-shrink-0 min-w-0">
               <Logo size="md" />
-              <div className="ml-4 flex items-center space-x-3">
+              <div className="ml-2 flex items-center space-x-2">
                 <div className="w-px h-6 bg-gray-300"></div>
-                <span className="text-sm font-bold text-gray-800 tracking-wide">
+                <span className="text-xs font-bold text-gray-800 tracking-wide whitespace-nowrap">
                   ADMIN CONTROL CENTER
                 </span>
-                <div className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded uppercase tracking-wider">
-                  RESTRICTED
-                </div>
               </div>
             </div>
 
             {/* Navigation Items */}
-            <div className="hidden lg:flex items-center space-x-1">
+            <div className="hidden lg:flex items-center space-x-1 flex-1 px-8">
               {navigation.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${
+                  className={`px-2 py-1.5 rounded-md text-xs font-medium transition-all duration-300 flex items-center space-x-1 hover:scale-105 transform ${
                     activeTab === item.id
-                      ? 'text-brand-navy bg-brand-navy/10 shadow-sm border border-brand-navy/20'
-                      : 'text-gray-600 hover:text-brand-navy hover:bg-gray-50'
+                      ? 'text-brand-navy bg-gradient-to-r from-brand-navy/10 to-brand-teal/10 shadow-md border border-brand-navy/20 scale-105'
+                      : 'text-gray-600 hover:text-brand-navy hover:bg-gray-50 hover:shadow-sm'
                   }`}
                 >
-                  <span className="text-sm">{item.icon}</span>
-                  <span>{item.name}</span>
+                  <span className="text-sm transition-transform duration-300 hover:scale-110">{item.icon}</span>
+                  <span className="hidden xl:inline text-xs font-semibold">{item.name}</span>
                 </button>
               ))}
             </div>
 
-            {/* Admin User Menu */}
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors border border-gray-200"
-              >
-                <div className="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">A</span>
-                </div>
-                <div className="hidden md:block text-left">
-                  <div className="text-sm font-semibold text-gray-900">{adminUser.email}</div>
-                  <div className="text-xs text-red-600 font-medium">System Administrator</div>
-                </div>
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+            {/* Notifications & Admin User Menu */}
+            <div className="flex items-center space-x-3 flex-shrink-0">
+              <Notifications />
               
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-                  <div className="px-4 py-3 border-b border-gray-100 bg-red-50">
-                    <div className="text-xs font-bold text-red-800 uppercase tracking-wide">ADMIN PANEL</div>
-                    <div className="text-xs text-red-600">System Administrator Access</div>
+              {/* Admin User Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 transition-all duration-300 border border-gray-200 hover:border-gray-300 hover:shadow-md"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-red-600 via-red-700 to-red-800 rounded-lg flex items-center justify-center shadow-lg">
+                    <span className="text-white text-sm font-bold">A</span>
                   </div>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium">System Logs</a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium">Security Settings</a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium">Audit Trail</a>
-                  <div className="border-t border-gray-100 mt-2 pt-2">
-                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Logout & Exit</button>
+                  <div className="hidden md:block text-left">
+                    <div className="text-xs font-bold text-gray-900">{adminUser.email}</div>
+                    <div className="text-xs text-red-600 font-semibold flex items-center space-x-1">
+                      <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                      <span>Admin</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+                    <div className="px-4 py-3 border-b border-gray-100 bg-red-50">
+                      <div className="text-xs font-bold text-red-800 uppercase tracking-wide">ADMIN PANEL</div>
+                      <div className="text-xs text-red-600">System Administrator Access</div>
+                    </div>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium">System Logs</a>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium">Security Settings</a>
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 font-medium">Audit Trail</a>
+                    <div className="border-t border-gray-100 mt-2 pt-2">
+                      <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium">Logout & Exit</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -773,7 +779,7 @@ const Campaigns = () => {
       title: 'Q4 Product Launch',
       category: 'Tech Reviews',
       platform: 'YouTube',
-      budget: '$5,000-10,000',
+      budget: '₹4,00,000-8,00,000',
       status: 'Live'
     },
     {
@@ -782,7 +788,7 @@ const Campaigns = () => {
       title: 'Summer Collection',
       category: 'Fashion',
       platform: 'Instagram',
-      budget: '$2,000-5,000',
+      budget: '₹1,60,000-4,00,000',
       status: 'Draft'
     },
     {
@@ -790,8 +796,8 @@ const Campaigns = () => {
       brand: 'Wellness Co',
       title: 'Fitness App Promo',
       category: 'Health & Fitness',
-      platform: 'TikTok',
-      budget: '$1,000-3,000',
+      platform: 'Instagram',
+      budget: '₹80,000-2,40,000',
       status: 'Disabled'
     }
   ]
@@ -863,7 +869,7 @@ const VerificationRequests = () => {
       id: 1,
       name: 'Alex Rodriguez',
       email: 'alex@example.com',
-      platforms: ['Instagram', 'TikTok'],
+      platforms: ['Instagram', 'YouTube'],
       followers: '85K',
       engagement: '3.9%',
       submittedDate: '2024-01-22',
@@ -873,7 +879,7 @@ const VerificationRequests = () => {
       id: 2,
       name: 'Lisa Wang',
       email: 'lisa@example.com',
-      platforms: ['YouTube', 'LinkedIn'],
+      platforms: ['YouTube', 'Facebook'],
       followers: '120K',
       engagement: '4.5%',
       submittedDate: '2024-01-21',

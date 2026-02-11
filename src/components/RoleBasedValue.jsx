@@ -57,10 +57,6 @@ const RoleBasedValue = () => {
                 </div>
               </div>
             </div>
-            
-            <button className="btn-primary w-full">
-              Start Finding Influencers
-            </button>
           </div>
 
           <div id="influencers" className="bg-white rounded-2xl p-8 md:p-10 shadow-lg border border-gray-200">
@@ -115,10 +111,6 @@ const RoleBasedValue = () => {
                 </div>
               </div>
             </div>
-            
-            <button className="btn-teal w-full">
-              Apply for Verification
-            </button>
           </div>
         </div>
       </div>

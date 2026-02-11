@@ -5,6 +5,8 @@ import LandingPage from './pages/LandingPage'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import VerifyEmail from './pages/VerifyEmail'
 import CompanyDashboard from './components/CompanyDashboard'
 import InfluencerDashboard from './components/InfluencerDashboard'
 import AdminDashboard from './components/AdminDashboard'
@@ -19,6 +21,8 @@ function App() {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/company/dashboard" element={<CompanyDashboard />} />
           <Route path="/influencer/dashboard" element={<InfluencerDashboard />} />
           <Route path="/admin/login" element={<AdminLogin />} />

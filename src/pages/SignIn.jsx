@@ -1,43 +1,43 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Logo from '../components/Logo'
+import { useAuth } from '../context/AuthContext.jsx'
 
 const SignIn = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-
-  // Admin credentials
-  const ADMIN_EMAIL = 'mandhanani@gmail.com'
-  const ADMIN_PASSWORD = 'Man@@@17'
+  const { login } = useAuth()
 
   const handleGoogleSignIn = () => {
-    // Mock redirect logic
+    // Placeholder for real Google OAuth flow
     console.log('Google sign-in initiated')
-    // Simulate redirect to dashboard based on user type
-    window.location.href = '/company/dashboard' // or '/influencer/dashboard'
   }
 
-  const handleEmailSignIn = (e) => {
+  const handleEmailSignIn = async (e) => {
     e.preventDefault()
-    
-    // Check if admin credentials
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      // Store admin auth
-      localStorage.setItem('adminAuth', JSON.stringify({
-        email: email,
-        role: 'admin',
-        loginTime: new Date().toISOString()
-      }))
-      navigate('/admin/dashboard')
-      return
+    setError('')
+    setLoading(true)
+
+    try {
+      const data = await login(email, password)
+      if (data.role === 'BRAND') {
+        navigate('/company/dashboard')
+      } else if (data.role === 'INFLUENCER') {
+        navigate('/influencer/dashboard')
+      } else if (data.role === 'ADMIN') {
+        navigate('/admin/dashboard')
+      } else {
+        navigate('/')
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to sign in')
+    } finally {
+      setLoading(false)
     }
-    
-    // Regular user login
-    console.log('Regular user sign-in:', { email, password })
-    // Simulate redirect to dashboard based on user type
-    window.location.href = '/company/dashboard' // or '/influencer/dashboard'
   }
 
   return (
@@ -139,11 +139,18 @@ const SignIn = () => {
 
             <button
               type="submit"
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200"
+              disabled={loading}
+              className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-gray-500 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200"
             >
-              Sign In
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          {error && (
+            <p className="mt-4 text-center text-sm text-red-600">
+              {error}
+            </p>
+          )}
 
           {/* Sign Up Link */}
           <p className="text-center text-sm text-gray-600 mt-6">

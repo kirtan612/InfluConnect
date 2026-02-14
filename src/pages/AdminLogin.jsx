@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import Logo from '../components/Logo'
 
 const AdminLogin = () => {
@@ -8,37 +9,26 @@ const AdminLogin = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-
-  // Authorized admin emails
-  const ADMIN_EMAILS = [
-    'man.dhanani@gmail.com', // Your Gmail for admin access
-    'admin@influconnect.com'
-  ]
+  const { adminLogin } = useAuth()
 
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    // Check if email is authorized
-    if (!ADMIN_EMAILS.includes(email.toLowerCase())) {
-      setError('Unauthorized access. Admin privileges required.')
+    try {
+      const userData = await adminLogin(email, password)
+      
+      if (userData.role === 'ADMIN') {
+        navigate('/admin/dashboard')
+      } else {
+        setError('Admin access required')
+      }
+    } catch (err) {
+      setError(err.message || 'Invalid credentials')
+    } finally {
       setLoading(false)
-      return
     }
-
-    // Simulate authentication (replace with real auth)
-    if (password === 'admin123') {
-      localStorage.setItem('adminAuth', JSON.stringify({
-        email: email,
-        role: 'admin',
-        loginTime: new Date().toISOString()
-      }))
-      navigate('/admin/dashboard')
-    } else {
-      setError('Invalid credentials')
-    }
-    setLoading(false)
   }
 
   return (

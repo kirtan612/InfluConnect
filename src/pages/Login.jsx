@@ -1,22 +1,43 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext.jsx'
 
 const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+  const { login } = useAuth()
 
   const handleGoogleSignIn = () => {
-    // Mock redirect logic
+    // Placeholder for real Google OAuth flow
     console.log('Google sign-in initiated')
-    // Simulate redirect to dashboard based on user type
-    window.location.href = '/company/dashboard' // or '/influencer/dashboard'
   }
 
-  const handleEmailSignIn = (e) => {
+  const handleEmailSignIn = async (e) => {
     e.preventDefault()
-    // Mock redirect logic
-    console.log('Email sign-in:', { email, password })
-    // Simulate redirect to dashboard based on user type
-    window.location.href = '/company/dashboard' // or '/influencer/dashboard'
+    setError('')
+    setLoading(true)
+
+    try {
+      const userData = await login(email, password)
+      
+      // Redirect based on role
+      if (userData.role === 'BRAND') {
+        navigate('/company/dashboard')
+      } else if (userData.role === 'INFLUENCER') {
+        navigate('/influencer/dashboard')
+      } else if (userData.role === 'ADMIN') {
+        navigate('/admin/dashboard')
+      } else {
+        navigate('/')
+      }
+    } catch (err) {
+      setError(err.message || 'Unable to sign in')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -89,11 +110,18 @@ const Login = () => {
 
             <button
               type="submit"
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200"
+              disabled={loading}
+              className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-gray-500 text-white py-3 px-4 rounded-lg font-semibold transition-colors duration-200"
             >
-              Sign In
+              {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          {error && (
+            <p className="mt-4 text-center text-sm text-red-600">
+              {error}
+            </p>
+          )}
 
           {/* Sign Up Link */}
           <p className="text-center text-sm text-gray-600 mt-6">

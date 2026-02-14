@@ -7,7 +7,7 @@ const ForgotPassword = () => {
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!email) {
       setError('Email is required')
@@ -18,9 +18,25 @@ const ForgotPassword = () => {
       return
     }
     
-    // Mock password reset
-    console.log('Password reset email sent to:', email)
-    setSubmitted(true)
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to send reset email')
+      }
+      
+      setSubmitted(true)
+    } catch (err) {
+      console.error('Password reset error:', err)
+      // Still show success message for security (don't reveal if email exists)
+      setSubmitted(true)
+    }
   }
 
   return (

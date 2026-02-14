@@ -1,15 +1,45 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import influencerService from '../services/influencerService'
 
 const Notifications = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'request', title: 'New Collaboration Request', message: 'Sarah Johnson sent you a collaboration request', time: '5 min ago', read: false, redirectTo: '/company/dashboard?tab=requests' },
-    { id: 2, type: 'accepted', title: 'Request Accepted', message: 'Mike Chen accepted your collaboration request', time: '1 hour ago', read: false, redirectTo: '/company/dashboard?tab=requests' },
-    { id: 3, type: 'message', title: 'New Message', message: 'You have a new message from Emma Davis', time: '2 hours ago', read: true, redirectTo: '/company/dashboard?tab=messages' },
-    { id: 4, type: 'reminder', title: 'Campaign Deadline', message: 'Q4 Product Launch campaign ends in 3 days', time: '1 day ago', read: true, redirectTo: '/company/dashboard?tab=campaigns' }
-  ])
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (showNotifications && user && user.role === 'INFLUENCER') {
+      fetchNotifications()
+    }
+  }, [showNotifications, user])
+
+  const fetchNotifications = async () => {
+    setLoading(true)
+    try {
+      const requests = await influencerService.getRequests()
+      
+      // Convert requests to notifications
+      const notifs = requests.map(req => ({
+        id: req.id,
+        type: req.status === 'pending' ? 'request' : req.status === 'accepted' ? 'accepted' : 'rejected',
+        title: req.status === 'pending' ? 'New Collaboration Request' : 
+               req.status === 'accepted' ? 'Request Accepted' : 'Request Rejected',
+        message: `${req.brand_name} - ${req.campaign_name}`,
+        time: new Date(req.created_at).toLocaleDateString(),
+        read: req.status !== 'pending',
+        redirectTo: '/influencer/dashboard'
+      }))
+      
+      setNotifications(notifs)
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const unreadCount = notifications.filter(n => !n.read).length
 
@@ -43,19 +73,11 @@ const Notifications = () => {
             </svg>
           </div>
         )
-      case 'message':
+      case 'rejected':
         return (
-          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-            <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-          </div>
-        )
-      case 'reminder':
-        return (
-          <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-            <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
         )
@@ -97,7 +119,12 @@ const Notifications = () => {
             </div>
 
             <div className="overflow-y-auto max-h-96">
-              {notifications.length > 0 ? (
+              {loading ? (
+                <div className="p-8 text-center">
+                  <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+                  <p className="text-gray-600 text-sm mt-2">Loading...</p>
+                </div>
+              ) : notifications.length > 0 ? (
                 notifications.map((notification) => (
                   <div
                     key={notification.id}
@@ -130,12 +157,6 @@ const Notifications = () => {
                   <p className="text-sm text-gray-500 mt-1">You're all caught up!</p>
                 </div>
               )}
-            </div>
-
-            <div className="p-3 border-t border-gray-200 text-center">
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                View all notifications
-              </button>
             </div>
           </div>
         </>

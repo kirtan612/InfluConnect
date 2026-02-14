@@ -3,6 +3,7 @@ FastAPI dependencies for authentication and database access.
 """
 from typing import Optional
 from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
 
@@ -12,26 +13,17 @@ from app.core.roles import UserRole
 from app.db.session import get_db
 from app.db.models.user import User
 
+# OAuth2 scheme for token extraction
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
 
 async def get_current_user(
-    token: str = Depends(lambda: None),
+    token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
     """
     Get current authenticated user from JWT token.
     Extract token from Authorization header.
-    """
-    # This will be properly implemented in the router with OAuth2PasswordBearer
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated"
-    )
-
-
-def get_current_user_dependency(token: str, db: Session) -> User:
-    """
-    Internal function to verify token and get user.
-    Used by routers with proper OAuth2PasswordBearer.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

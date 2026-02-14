@@ -30,7 +30,15 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # CORS
-    CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: list = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+    ]
+    
+    # Frontend URL (for email links)
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
     
     # Email (optional, for future use)
     SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.gmail.com")
@@ -43,3 +51,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Debug: Print SECRET_KEY to verify it's loaded (remove in production)
+print(f"[DEBUG] SECRET_KEY loaded: {settings.SECRET_KEY[:10]}... (length: {len(settings.SECRET_KEY)})")
+print(f"[DEBUG] ALGORITHM: {settings.ALGORITHM}")
+print(f"[DEBUG] DATABASE_URL: {settings.DATABASE_URL[:30]}...")

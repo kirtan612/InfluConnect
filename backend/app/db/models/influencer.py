@@ -28,6 +28,10 @@ class InfluencerProfile(Base):
     )
     profile_completion = Column(Float, default=0.0)  # 0-100 percentage
     admin_note = Column(String(500), nullable=True)
+    profile_image_url = Column(String(500), nullable=True)
+    cover_image_url = Column(String(500), nullable=True)
+    social_links = Column(JSON, nullable=True)  # {"instagram": "...", "youtube": "..."}
+    platforms = Column(JSON, default=lambda: [])  # ["Instagram", "YouTube"]
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -35,6 +39,7 @@ class InfluencerProfile(Base):
     user = relationship("User", back_populates="influencer_profile")
     collaboration_requests = relationship("CollaborationRequest", back_populates="influencer")
     verification_requests = relationship("VerificationRequest", back_populates="influencer")
+    achievements = relationship("Achievement", back_populates="influencer")
     
     def __repr__(self):
         return f"<InfluencerProfile {self.id} - {self.display_name}>"

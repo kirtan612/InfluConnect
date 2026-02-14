@@ -2,7 +2,7 @@
 Influencer profile schemas.
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 from app.core.roles import VerificationStatus
 
@@ -19,9 +19,15 @@ class InfluencerProfileCreate(InfluencerProfileBase):
     pass
 
 
-class InfluencerProfileUpdate(InfluencerProfileBase):
+class InfluencerProfileUpdate(BaseModel):
     """Schema for updating influencer profile."""
-    pass
+    display_name: Optional[str] = Field(None, max_length=100)
+    bio: Optional[str] = Field(None, max_length=500)
+    category: Optional[str] = Field(None, max_length=100)
+    profile_image_url: Optional[str] = Field(None, max_length=500)
+    cover_image_url: Optional[str] = Field(None, max_length=500)
+    social_links: Optional[Dict[str, str]] = None
+    platforms: Optional[List[str]] = None
 
 
 class InfluencerProfileResponse(InfluencerProfileBase):
@@ -31,9 +37,13 @@ class InfluencerProfileResponse(InfluencerProfileBase):
     trust_score: float
     verification_status: VerificationStatus
     profile_completion: float
-    admin_note: Optional[str]
+    admin_note: Optional[str] = None
+    profile_image_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    social_links: Optional[Dict[str, str]] = None
+    platforms: Optional[List[str]] = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -57,11 +67,13 @@ class InfluencerListResponse(BaseModel):
     """Schema for list of influencers (search results)."""
     id: int
     user_id: int
-    display_name: Optional[str]
-    category: Optional[str]
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    category: Optional[str] = None
     trust_score: float
     verification_status: VerificationStatus
     profile_completion: float
+    profile_image_url: Optional[str] = None
     
     class Config:
         from_attributes = True

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.core.roles import UserRole, CollaborationRequestStatus
+from app.core.dependencies import get_current_user
 from app.db.session import get_db
 from app.db.models.user import User
 from app.db.models.brand import BrandProfile
@@ -17,7 +18,6 @@ from app.schemas.request import (
     CollaborationRequestResponse, CollaborationRequestWithDetails
 )
 from app.schemas.influencer import InfluencerListResponse
-from app.routers.auth import get_current_user
 from app.utils.permissions import (
     check_influencer_can_receive_requests,
     check_campaign_access,

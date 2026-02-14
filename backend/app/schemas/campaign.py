@@ -61,7 +61,22 @@ class CampaignResponse(CampaignBase):
     brand_id: int
     status: CampaignStatus
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    @field_validator('platforms', mode='before')
+    @classmethod
+    def ensure_platforms_list(cls, v):
+        """Ensure platforms is always a list."""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            # If it's a string representation, try to parse it
+            import json
+            try:
+                return json.loads(v)
+            except:
+                return []
+        return v
     
     class Config:
         from_attributes = True

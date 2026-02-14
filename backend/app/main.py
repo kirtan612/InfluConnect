@@ -1,90 +1,80 @@
 """
-InfluConnect FastAPI Application
-Main entry point for the backend server.
+InfluConnect FastAPI application entry point.
 """
-from fastapi import FastAPI, status
+import os
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 
-from app.core.config import settings
-from app.db.session import engine
-from app.db.base import Base
-from app.routers import auth, influencer, brand, campaign, request, admin
+from app.db.init_db import init_db
+from app.routers import auth, influencer, brand, campaign, request, admin, upload
 
-# Create all database tables
-Base.metadata.create_all(bind=engine)
+# Initialize database tables
+init_db()
 
-# Initialize FastAPI app
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
-    description="Production-grade influencer platform backend",
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json"
+    title="InfluConnect API",
+    description="Trust-first influencer platform API",
+    version="1.0.0"
 )
 
-# CORS middleware
+# ============================================================================
+# CORS Middleware
+# ============================================================================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# ============================================================================
+# Static files — serve uploaded images from /media
+# ============================================================================
+MEDIA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "media")
+os.makedirs(MEDIA_DIR, exist_ok=True)
+app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
-# Error handling
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request, exc):
-    """Handle validation errors with detailed response."""
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={
-            "detail": exc.errors(),
-            "message": "Validation failed"
-        }
-    )
-
-
-# Health check endpoint
-@app.get("/health", tags=["system"])
-def health_check():
-    """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "service": settings.APP_NAME,
-        "version": settings.APP_VERSION
-    }
-
-
-# Root endpoint
-@app.get("/", tags=["system"])
-def root():
-    """Root endpoint with API information."""
-    return {
-        "name": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "docs": "/api/docs",
-        "redoc": "/api/redoc"
-    }
-
-
-# Include routers
+# ============================================================================
+# Routers
+# ============================================================================
 app.include_router(auth.router, prefix="/api")
 app.include_router(influencer.router, prefix="/api")
 app.include_router(brand.router, prefix="/api")
 app.include_router(campaign.router, prefix="/api")
 app.include_router(request.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(upload.router, prefix="/api")
 
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.DEBUG,
-        log_level="info"
+# ============================================================================
+# Global exception handler
+# ============================================================================
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch-all exception handler."""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"}
     )
+
+# ============================================================================
+# Root endpoint
+# ============================================================================
+@app.get("/")
+async def root():
+    return {
+        "message": "InfluConnect API",
+        "version": "1.0.0",
+        "docs": "/docs"
+    }
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}

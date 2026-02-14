@@ -49,3 +49,14 @@ class UserResponse(UserBase):
 class RefreshTokenRequest(BaseModel):
     """Schema for refresh token request."""
     refresh_token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Schema for forgot password request."""
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema for reset password request."""
+    token: str
+    new_password: str = Field(..., min_length=8)

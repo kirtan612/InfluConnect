@@ -17,9 +17,11 @@ from app.db.models.user import User
 from app.db.models.influencer import InfluencerProfile
 from app.db.models.brand import BrandProfile
 from app.schemas.user import (
-    UserCreate, UserLogin, TokenResponse, RefreshTokenRequest
+    UserCreate, UserLogin, TokenResponse, RefreshTokenRequest,
+    ForgotPasswordRequest, ResetPasswordRequest
 )
 from app.services.trust_engine import TrustEngine
+from app.services.email_service import send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -302,3 +304,91 @@ def get_current_auth(current_user: User = Depends(get_current_user)):
         email=current_user.email,
         role=current_user.role
     )
+
+
+@router.post("/forgot-password")
+def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Request password reset.
+    Generates a reset token and sends it via email (or logs it in development).
+    
+    Note: Always returns success even if email doesn't exist (security best practice).
+    """
+    user = db.query(User).filter(User.email == request.email).first()
+    
+    if user:
+        # Generate reset token (valid for 1 hour)
+        reset_token = create_access_token(
+            data={"sub": str(user.id), "type": "password_reset"},
+            expires_delta=timedelta(hours=1)
+        )
+        
+        # Send password reset email
+        email_sent = send_password_reset_email(
+            to=user.email,
+            reset_token=reset_token,
+            frontend_url=settings.FRONTEND_URL
+        )
+        
+        if email_sent:
+            print(f"✓ Password reset email sent to {user.email}")
+        else:
+            print(f"⚠️  Failed to send email to {user.email}")
+            # Still log the token for development
+            print(f"\n{'='*60}")
+            print(f"PASSWORD RESET TOKEN for {user.email}")
+            print(f"{'='*60}")
+            print(f"Token: {reset_token}")
+            print(f"Reset URL: http://localhost:5173/reset-password?token={reset_token}")
+            print(f"{'='*60}\n")
+    
+    # Always return success (don't reveal if email exists)
+    return {
+        "message": "If an account exists for this email, you will receive a password reset link shortly."
+    }
+
+
+@router.post("/reset-password")
+def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Reset password using reset token.
+    """
+    try:
+        payload = decode_token(request.token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Verify token type
+    if payload.get("type") != "password_reset":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token type"
+        )
+    
+    user_id = payload.get("sub")
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Update password
+    user.password_hash = hash_password(request.new_password)
+    db.commit()
+    
+    print(f"\n✓ Password reset successful for {user.email}\n")
+    
+    return {
+        "message": "Password reset successful. You can now login with your new password."
+    }

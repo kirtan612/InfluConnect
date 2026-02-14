@@ -5,13 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.roles import UserRole, CampaignStatus
+from app.core.dependencies import get_current_user
 from app.db.session import get_db
 from app.db.models.user import User
 from app.db.models.brand import BrandProfile
 from app.schemas.brand import (
     BrandProfileResponse, BrandProfileCreate, BrandProfileUpdate
 )
-from app.routers.auth import get_current_user
 from app.utils.permissions import check_brand_can_create_campaign
 
 
@@ -69,14 +69,12 @@ def update_profile(
         )
     
     # Update fields
-    if data.company_name is not None:
-        brand.company_name = data.company_name
-    if data.industry is not None:
-        brand.industry = data.industry
-    if data.location is not None:
-        brand.location = data.location
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(brand, key, value)
     
     db.commit()
     db.refresh(brand)
     
     return brand
+

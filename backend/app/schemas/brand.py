@@ -32,7 +32,7 @@ class BrandProfileResponse(BrandProfileBase):
     user_id: int
     status: BrandStatus
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True

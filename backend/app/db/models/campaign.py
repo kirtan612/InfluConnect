@@ -21,7 +21,7 @@ class Campaign(Base):
     description = Column(String(2000), nullable=True)
     category = Column(String(100), nullable=True)
     # Stored as JSON list: ["Instagram", "YouTube", "LinkedIn"]
-    platforms = Column(JSON, default=list)
+    platforms = Column(JSON, default=lambda: [])
     budget_min = Column(Float, nullable=True)
     budget_max = Column(Float, nullable=True)
     status = Column(Enum(CampaignStatus), default=CampaignStatus.DRAFT)

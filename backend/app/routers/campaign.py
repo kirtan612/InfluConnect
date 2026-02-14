@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.roles import UserRole, CampaignStatus
+from app.core.dependencies import get_current_user
 from app.db.session import get_db
 from app.db.models.user import User
 from app.db.models.brand import BrandProfile
@@ -15,7 +16,6 @@ from app.schemas.campaign import (
     CampaignCreate, CampaignUpdate, CampaignResponse
 )
 from app.schemas.influencer import InfluencerListResponse
-from app.routers.auth import get_current_user
 from app.utils.permissions import check_brand_can_create_campaign, check_campaign_access
 from app.utils.validators import validate_platforms, validate_budget
 
@@ -33,6 +33,48 @@ def get_brand_user(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+# ============================================================================
+# PUBLIC/INFLUENCER ENDPOINTS (must come first for proper routing)
+# ============================================================================
+
+@router.get("/explore", response_model=List[CampaignResponse])
+def explore_campaigns(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    category: str = None
+):
+    """
+    Browse active campaigns (available to all logged-in users, especially influencers).
+    """
+    query = db.query(Campaign).filter(Campaign.status == CampaignStatus.ACTIVE)
+    
+    if category:
+        query = query.filter(Campaign.category == category)
+    
+    campaigns = query.order_by(Campaign.created_at.desc()).all()
+    
+    return [
+        CampaignResponse(
+            id=c.id,
+            brand_id=c.brand_id,
+            name=c.name,
+            description=c.description,
+            category=c.category,
+            platforms=c.platforms if c.platforms else [],
+            budget_min=c.budget_min,
+            budget_max=c.budget_max,
+            status=c.status,
+            created_at=c.created_at,
+            updated_at=c.updated_at
+        )
+        for c in campaigns
+    ]
+
+
+# ============================================================================
+# BRAND-ONLY ENDPOINTS
+# ============================================================================
+
 @router.post("", response_model=CampaignResponse)
 def create_campaign(
     data: CampaignCreate,
@@ -43,6 +85,10 @@ def create_campaign(
     Create a new campaign.
     Only brands can create campaigns, and only if not flagged.
     """
+    # Debug logging
+    print(f"[DEBUG] Campaign creation request from user: {current_user.email} (role: {current_user.role})")
+    print(f"[DEBUG] Campaign data: {data.model_dump()}")
+    
     # Check brand can create campaigns
     check_brand_can_create_campaign(current_user, db)
     
@@ -56,10 +102,13 @@ def create_campaign(
     ).first()
     
     if not brand:
+        print(f"[DEBUG] Brand profile not found for user_id: {current_user.id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Brand profile not found"
         )
+    
+    print(f"[DEBUG] Brand profile found: ID={brand.id}, Name={brand.company_name}")
     
     # Create campaign
     db_campaign = Campaign(
@@ -67,7 +116,7 @@ def create_campaign(
         name=data.name,
         description=data.description,
         category=data.category,
-        platforms=data.platforms,
+        platforms=data.platforms if data.platforms else [],
         budget_min=data.budget_min,
         budget_max=data.budget_max,
         status=CampaignStatus.DRAFT  # New campaigns start in DRAFT
@@ -77,7 +126,22 @@ def create_campaign(
     db.commit()
     db.refresh(db_campaign)
     
-    return db_campaign
+    print(f"[DEBUG] Campaign created successfully: ID={db_campaign.id}")
+    
+    # Return explicit response
+    return CampaignResponse(
+        id=db_campaign.id,
+        brand_id=db_campaign.brand_id,
+        name=db_campaign.name,
+        description=db_campaign.description,
+        category=db_campaign.category,
+        platforms=db_campaign.platforms if db_campaign.platforms else [],
+        budget_min=db_campaign.budget_min,
+        budget_max=db_campaign.budget_max,
+        status=db_campaign.status,
+        created_at=db_campaign.created_at,
+        updated_at=db_campaign.updated_at
+    )
 
 
 @router.get("/{campaign_id}", response_model=CampaignResponse)
@@ -100,7 +164,19 @@ def get_campaign(
             detail="Campaign not found"
         )
     
-    return campaign
+    return CampaignResponse(
+        id=campaign.id,
+        brand_id=campaign.brand_id,
+        name=campaign.name,
+        description=campaign.description,
+        category=campaign.category,
+        platforms=campaign.platforms if campaign.platforms else [],
+        budget_min=campaign.budget_min,
+        budget_max=campaign.budget_max,
+        status=campaign.status,
+        created_at=campaign.created_at,
+        updated_at=campaign.updated_at
+    )
 
 
 @router.put("/{campaign_id}", response_model=CampaignResponse)
@@ -131,25 +207,26 @@ def update_campaign(
                        data.budget_max or campaign.budget_max)
     
     # Update fields
-    if data.name is not None:
-        campaign.name = data.name
-    if data.description is not None:
-        campaign.description = data.description
-    if data.category is not None:
-        campaign.category = data.category
-    if data.platforms is not None:
-        campaign.platforms = data.platforms
-    if data.budget_min is not None:
-        campaign.budget_min = data.budget_min
-    if data.budget_max is not None:
-        campaign.budget_max = data.budget_max
-    if data.status is not None:
-        campaign.status = data.status
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(campaign, key, value)
     
     db.commit()
     db.refresh(campaign)
     
-    return campaign
+    return CampaignResponse(
+        id=campaign.id,
+        brand_id=campaign.brand_id,
+        name=campaign.name,
+        description=campaign.description,
+        category=campaign.category,
+        platforms=campaign.platforms if campaign.platforms else [],
+        budget_min=campaign.budget_min,
+        budget_max=campaign.budget_max,
+        status=campaign.status,
+        created_at=campaign.created_at,
+        updated_at=campaign.updated_at
+    )
 
 
 @router.delete("/{campaign_id}")
@@ -216,4 +293,21 @@ def list_campaigns(
             )
     
     campaigns = query.all()
-    return campaigns
+    
+    # Convert to response format explicitly
+    return [
+        CampaignResponse(
+            id=c.id,
+            brand_id=c.brand_id,
+            name=c.name,
+            description=c.description,
+            category=c.category,
+            platforms=c.platforms if c.platforms else [],
+            budget_min=c.budget_min,
+            budget_max=c.budget_max,
+            status=c.status,
+            created_at=c.created_at,
+            updated_at=c.updated_at
+        )
+        for c in campaigns
+    ]

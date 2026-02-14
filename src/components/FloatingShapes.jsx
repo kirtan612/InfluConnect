@@ -26,3 +26,5 @@ const FloatingShapes = () => {
 }
 
 export default FloatingShapes
+
+Update according to backend

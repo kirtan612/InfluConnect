@@ -26,6 +26,7 @@ class User(Base):
     # Relationships
     influencer_profile = relationship("InfluencerProfile", back_populates="user", uselist=False)
     brand_profile = relationship("BrandProfile", back_populates="user", uselist=False)
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User {self.id} - {self.email} ({self.role})>"

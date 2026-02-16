@@ -26,6 +26,23 @@ class CollaborationRequestStatus(str, Enum):
     REJECTED = "rejected"
 
 
+class CollaborationStatus(str, Enum):
+    """Status of active collaborations (after request accepted)."""
+    ACTIVE = "ACTIVE"
+    DELIVERABLES_SET = "DELIVERABLES_SET"
+    CONTENT_SUBMITTED = "CONTENT_SUBMITTED"
+    CONTENT_APPROVED = "CONTENT_APPROVED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class PaymentStatus(str, Enum):
+    """Payment status for collaborations."""
+    PENDING = "PENDING"
+    RELEASED = "RELEASED"
+    CANCELLED = "CANCELLED"
+
+
 class CampaignStatus(str, Enum):
     """Campaign status."""
     DRAFT = "draft"

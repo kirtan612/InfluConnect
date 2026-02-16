@@ -1,17 +1,27 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import influencerService from '../services/influencerService'
+import notificationService from '../services/notificationService'
 
 const Notifications = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (showNotifications && user && user.role === 'INFLUENCER') {
+    if (user) {
+      fetchUnreadCount()
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (showNotifications && user) {
       fetchNotifications()
     }
   }, [showNotifications, user])
@@ -19,21 +29,8 @@ const Notifications = () => {
   const fetchNotifications = async () => {
     setLoading(true)
     try {
-      const requests = await influencerService.getRequests()
-      
-      // Convert requests to notifications
-      const notifs = requests.map(req => ({
-        id: req.id,
-        type: req.status === 'pending' ? 'request' : req.status === 'accepted' ? 'accepted' : 'rejected',
-        title: req.status === 'pending' ? 'New Collaboration Request' : 
-               req.status === 'accepted' ? 'Request Accepted' : 'Request Rejected',
-        message: `${req.brand_name} - ${req.campaign_name}`,
-        time: new Date(req.created_at).toLocaleDateString(),
-        read: req.status !== 'pending',
-        redirectTo: '/influencer/dashboard'
-      }))
-      
-      setNotifications(notifs)
+      const data = await notificationService.getNotifications()
+      setNotifications(data)
     } catch (err) {
       console.error('Failed to fetch notifications:', err)
     } finally {
@@ -41,23 +38,45 @@ const Notifications = () => {
     }
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length
-
-  const markAsRead = (id, redirectTo) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n))
-    setShowNotifications(false)
-    if (redirectTo) {
-      navigate(redirectTo)
+  const fetchUnreadCount = async () => {
+    try {
+      const data = await notificationService.getUnreadCount()
+      setUnreadCount(data.count)
+    } catch (err) {
+      console.error('Failed to fetch unread count:', err)
     }
   }
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })))
+  const markAsRead = async (id) => {
+    try {
+      await notificationService.markAsRead(id)
+      setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n))
+      setUnreadCount(Math.max(0, unreadCount - 1))
+    } catch (err) {
+      console.error('Failed to mark as read:', err)
+    }
+  }
+
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead()
+      setNotifications(notifications.map(n => ({ ...n, is_read: true })))
+      setUnreadCount(0)
+    } catch (err) {
+      console.error('Failed to mark all as read:', err)
+    }
+  }
+
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification.id)
+    setShowNotifications(false)
+    // Navigate to dashboard to see the related item
+    navigate('/dashboard')
   }
 
   const getIcon = (type) => {
     switch (type) {
-      case 'request':
+      case 'REQUEST_SENT':
         return (
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
             <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,7 +84,9 @@ const Notifications = () => {
             </svg>
           </div>
         )
-      case 'accepted':
+      case 'REQUEST_ACCEPTED':
+      case 'CONTENT_APPROVED':
+      case 'COLLABORATION_COMPLETED':
         return (
           <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
             <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,7 +94,7 @@ const Notifications = () => {
             </svg>
           </div>
         )
-      case 'rejected':
+      case 'REQUEST_REJECTED':
         return (
           <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
             <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,9 +102,39 @@ const Notifications = () => {
             </svg>
           </div>
         )
+      case 'DELIVERABLES_SET':
+      case 'CONTENT_SUBMITTED':
+        return (
+          <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </div>
+        )
       default:
-        return null
+        return (
+          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        )
     }
+  }
+
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now - date
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString()
   }
 
   return (
@@ -97,7 +148,7 @@ const Notifications = () => {
         </svg>
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
-            {unreadCount}
+            {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
@@ -128,20 +179,19 @@ const Notifications = () => {
                 notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    onClick={() => markAsRead(notification.id, notification.redirectTo)}
-                    className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${!notification.read ? 'bg-blue-50' : ''}`}
+                    onClick={() => handleNotificationClick(notification)}
+                    className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${!notification.is_read ? 'bg-blue-50' : ''}`}
                   >
                     <div className="flex items-start space-x-3">
                       {getIcon(notification.type)}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
-                          <p className="text-sm font-semibold text-gray-900">{notification.title}</p>
-                          {!notification.read && (
-                            <div className="w-2 h-2 bg-blue-600 rounded-full ml-2 mt-1"></div>
+                          <p className="text-sm font-medium text-gray-900">{notification.message}</p>
+                          {!notification.is_read && (
+                            <div className="w-2 h-2 bg-blue-600 rounded-full ml-2 mt-1 flex-shrink-0"></div>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                        <p className="text-xs text-gray-500 mt-1">{formatTime(notification.created_at)}</p>
                       </div>
                     </div>
                   </div>

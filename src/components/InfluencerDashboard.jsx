@@ -7,6 +7,7 @@ import LoadingSpinner from './LoadingSpinner'
 import ErrorMessage from './ErrorMessage'
 import EmptyState from './EmptyState'
 import influencerService from '../services/influencerService'
+import collaborationService from '../services/collaborationService'
 
 const InfluencerDashboard = () => {
   const [activeTab, setActiveTab] = useState('profile')
@@ -35,6 +36,7 @@ const InfluencerDashboard = () => {
     { id: 'achievements', name: 'Achievements', icon: '🏆' },
     { id: 'verification', name: 'Verification', icon: '✓' },
     { id: 'campaigns', name: 'Browse Campaigns', icon: '🎯' },
+    { id: 'collaborations', name: 'Collaborations', icon: '🤝' },
     { id: 'requests', name: 'Requests', icon: '📬' }
   ]
 
@@ -124,6 +126,7 @@ const InfluencerDashboard = () => {
         {activeTab === 'achievements' && <Achievements />}
         {activeTab === 'verification' && <Verification />}
         {activeTab === 'campaigns' && <BrowseCampaigns />}
+        {activeTab === 'collaborations' && <InfluencerCollaborations />}
         {activeTab === 'requests' && <Requests />}
       </main>
     </div>
@@ -1093,6 +1096,346 @@ const Requests = () => {
           message={filter === 'all' ? "You haven't received any collaboration requests yet." : `No ${filter} requests found.`}
         />
       )}
+    </div>
+  )
+}
+
+// Influencer Collaborations Component
+const InfluencerCollaborations = () => {
+  const [collaborations, setCollaborations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [selectedCollab, setSelectedCollab] = useState(null)
+  const [showSubmit, setShowSubmit] = useState(false)
+
+  const fetchCollaborations = () => {
+    setLoading(true)
+    setError(null)
+
+    collaborationService.getCollaborations()
+      .then(data => {
+        setCollaborations(data)
+        setLoading(false)
+      })
+      .catch(err => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }
+
+  useEffect(() => {
+    fetchCollaborations()
+  }, [])
+
+  const getStatusColor = (status) => {
+    const colors = {
+      'ACTIVE': 'bg-blue-100 text-blue-800',
+      'DELIVERABLES_SET': 'bg-purple-100 text-purple-800',
+      'CONTENT_SUBMITTED': 'bg-yellow-100 text-yellow-800',
+      'CONTENT_APPROVED': 'bg-green-100 text-green-800',
+      'COMPLETED': 'bg-gray-100 text-gray-800',
+      'CANCELLED': 'bg-red-100 text-red-800'
+    }
+    return colors[status] || 'bg-gray-100 text-gray-800'
+  }
+
+  const getStatusLabel = (status) => {
+    const labels = {
+      'ACTIVE': 'Active - Waiting for deliverables',
+      'DELIVERABLES_SET': 'Ready to work',
+      'CONTENT_SUBMITTED': 'Content submitted - Under review',
+      'CONTENT_APPROVED': 'Content approved',
+      'COMPLETED': 'Completed',
+      'CANCELLED': 'Cancelled'
+    }
+    return labels[status] || status
+  }
+
+  if (loading) return <LoadingSpinner message="Loading collaborations..." />
+  if (error) return <ErrorMessage error={error} onRetry={fetchCollaborations} />
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">My Collaborations</h1>
+        <p className="text-gray-600 mt-1">Track and manage your ongoing collaborations</p>
+      </div>
+
+      {collaborations.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6">
+          {collaborations.map((collab) => (
+            <div key={collab.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">Collaboration #{collab.id}</h3>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(collab.status)}`}>
+                      {getStatusLabel(collab.status)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600">Campaign ID: {collab.campaign_id}</p>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mb-4">
+                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                  <span>Progress</span>
+                  <span className="font-semibold">{collab.progress_percentage}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-brand-teal h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${collab.progress_percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Deliverables */}
+              {collab.deliverables && Object.keys(collab.deliverables).length > 0 && (
+                <div className="mb-4 p-4 bg-purple-50 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2">📋 Deliverables</h4>
+                  <p className="text-sm text-gray-700 mb-2">{collab.deliverables.description}</p>
+                  {collab.deliverables.requirements && (
+                    <ul className="space-y-1 mb-2">
+                      {collab.deliverables.requirements.map((req, idx) => (
+                        <li key={idx} className="text-sm text-gray-600 flex items-start">
+                          <span className="text-brand-teal mr-2">✓</span>
+                          {req}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {collab.deadline && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      ⏰ Deadline: {new Date(collab.deadline).toLocaleDateString()} at {new Date(collab.deadline).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Submitted Content */}
+              {collab.content_links && collab.content_links.length > 0 && (
+                <div className="mb-4 p-4 bg-green-50 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2">✅ Your Submitted Content</h4>
+                  <div className="space-y-2">
+                    {collab.content_links.map((content, idx) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <div>
+                          <a href={content.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+                            {content.platform} - {content.description || 'View Content'}
+                          </a>
+                          {content.submitted_at && (
+                            <p className="text-xs text-gray-500">
+                              Submitted: {new Date(content.submitted_at).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Approval Feedback */}
+              {collab.deliverables?.approval_feedback && (
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="font-semibold text-gray-900 mb-2">💬 Brand Feedback</h4>
+                  <p className="text-sm text-gray-700">{collab.deliverables.approval_feedback}</p>
+                </div>
+              )}
+
+              {/* Payment Status */}
+              {collab.payment_status === 'RELEASED' && (
+                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800 font-medium">
+                    💰 Payment has been released!
+                  </p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex space-x-3">
+                {collab.status === 'DELIVERABLES_SET' && (
+                  <button
+                    onClick={() => {
+                      setSelectedCollab(collab)
+                      setShowSubmit(true)
+                    }}
+                    className="btn-primary text-sm"
+                  >
+                    Submit Content
+                  </button>
+                )}
+                {collab.status === 'COMPLETED' && (
+                  <div className="text-sm text-gray-600">
+                    🎉 Collaboration completed successfully!
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          icon="🤝"
+          title="No active collaborations"
+          message="You don't have any active collaborations yet. Accept collaboration requests to get started!"
+        />
+      )}
+
+      {/* Submit Content Modal */}
+      {showSubmit && selectedCollab && (
+        <SubmitContentModal
+          collaboration={selectedCollab}
+          onClose={() => {
+            setShowSubmit(false)
+            setSelectedCollab(null)
+          }}
+          onSuccess={() => {
+            setShowSubmit(false)
+            setSelectedCollab(null)
+            fetchCollaborations()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// Submit Content Modal Component
+const SubmitContentModal = ({ collaboration, onClose, onSuccess }) => {
+  const [contentLinks, setContentLinks] = useState([
+    { url: '', platform: 'Instagram', description: '' }
+  ])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+
+  const handleAddLink = () => {
+    setContentLinks([...contentLinks, { url: '', platform: 'Instagram', description: '' }])
+  }
+
+  const handleLinkChange = (index, field, value) => {
+    const newLinks = [...contentLinks]
+    newLinks[index][field] = value
+    setContentLinks(newLinks)
+  }
+
+  const handleRemoveLink = (index) => {
+    const newLinks = contentLinks.filter((_, i) => i !== index)
+    setContentLinks(newLinks)
+  }
+
+  const handleSubmit = async () => {
+    const validLinks = contentLinks.filter(link => link.url.trim())
+    
+    if (validLinks.length === 0) {
+      setError('At least one content link is required')
+      return
+    }
+
+    setSubmitting(true)
+    setError(null)
+
+    try {
+      await collaborationService.submitContent(collaboration.id, {
+        content_links: validLinks
+      })
+      onSuccess()
+    } catch (err) {
+      setError(err.response?.data?.detail || err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Submit Content</h3>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {contentLinks.map((link, index) => (
+            <div key={index} className="p-4 border border-gray-200 rounded-lg">
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="font-medium text-gray-900">Content #{index + 1}</h4>
+                {contentLinks.length > 1 && (
+                  <button
+                    onClick={() => handleRemoveLink(index)}
+                    className="text-red-600 hover:bg-red-50 px-2 py-1 rounded"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
+                  <select
+                    value={link.platform}
+                    onChange={(e) => handleLinkChange(index, 'platform', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  >
+                    <option value="Instagram">Instagram</option>
+                    <option value="YouTube">YouTube</option>
+                    <option value="TikTok">TikTok</option>
+                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="Twitter">Twitter</option>
+                    <option value="Facebook">Facebook</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Content URL</label>
+                  <input
+                    type="url"
+                    value={link.url}
+                    onChange={(e) => handleLinkChange(index, 'url', e.target.value)}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <input
+                    type="text"
+                    value={link.description}
+                    onChange={(e) => handleLinkChange(index, 'description', e.target.value)}
+                    placeholder="Brief description of the content"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+
+          <button
+            onClick={handleAddLink}
+            className="text-sm text-brand-teal hover:text-teal-700 font-medium"
+          >
+            + Add Another Content Link
+          </button>
+        </div>
+
+        <div className="flex justify-end space-x-3 mt-6">
+          <button onClick={onClose} className="btn-secondary">Cancel</button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="btn-primary"
+          >
+            {submitting ? 'Submitting...' : 'Submit Content'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

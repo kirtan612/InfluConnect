@@ -345,4 +345,3 @@ const InfluencerProfileSetup = () => {
 }
 
 export default InfluencerProfileSetup
-Profile setup

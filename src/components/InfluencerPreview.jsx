@@ -11,7 +11,7 @@ const InfluencerPreview = () => {
       engagement: '4.2%',
       trustScore: 94,
       verified: true,
-      bgColor: 'bg-pink-500'
+      bgColor: 'bg-gradient-to-br from-pink-500 to-rose-500'
     },
     {
       id: 2,
@@ -22,7 +22,7 @@ const InfluencerPreview = () => {
       engagement: '5.1%',
       trustScore: 91,
       verified: true,
-      bgColor: 'bg-blue-500'
+      bgColor: 'bg-gradient-to-br from-blue-500 to-indigo-500'
     },
     {
       id: 3,
@@ -33,7 +33,7 @@ const InfluencerPreview = () => {
       engagement: '3.8%',
       trustScore: 96,
       verified: true,
-      bgColor: 'bg-green-500'
+      bgColor: 'bg-gradient-to-br from-emerald-500 to-teal-500'
     },
     {
       id: 4,
@@ -44,73 +44,75 @@ const InfluencerPreview = () => {
       engagement: '4.7%',
       trustScore: 89,
       verified: true,
-      bgColor: 'bg-purple-500'
+      bgColor: 'bg-gradient-to-br from-purple-500 to-violet-500'
     }
   ]
 
   return (
-    <section className="py-20 bg-white">
+    <section className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-            Discover Verified Influencers
+          <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight">
+            Discover <span className="text-gradient-primary">Verified Influencers</span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
             Browse our curated database of admin-verified influencers with transparent metrics and trust scores
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {influencers.map((influencer) => (
-            <div key={influencer.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-12 h-12 ${influencer.bgColor} rounded-full flex items-center justify-center text-white font-semibold`}>
+            <div key={influencer.id} className="card-glass p-6 hover:-translate-y-2 transition-transform duration-300 group">
+              <div className="flex items-center justify-between mb-6">
+                <div className={`w-14 h-14 ${influencer.bgColor} rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg`}>
                   {influencer.avatar}
                 </div>
                 {influencer.verified && (
-                  <svg className="w-6 h-6 text-brand-teal" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <div className="bg-blue-50 p-2 rounded-full">
+                    <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </div>
                 )}
               </div>
-              
-              <h3 className="font-semibold text-gray-900 mb-1">{influencer.name}</h3>
-              <p className="text-sm text-gray-500 mb-4">{influencer.category}</p>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Followers</span>
-                  <span className="font-semibold text-gray-900">{influencer.followers}</span>
+
+              <h3 className="text-lg font-bold text-slate-900 mb-1">{influencer.name}</h3>
+              <p className="text-sm text-slate-500 mb-6">{influencer.category}</p>
+
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Followers</span>
+                  <span className="font-bold text-slate-900">{influencer.followers}</span>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Engagement</span>
-                  <span className="font-semibold text-gray-900">{influencer.engagement}</span>
+
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Engagement</span>
+                  <span className="font-bold text-slate-900">{influencer.engagement}</span>
                 </div>
-                
-                <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                  <span className="text-sm font-medium text-brand-teal">Trust Score</span>
-                  <div className="flex items-center">
-                    <span className="text-lg font-bold text-gray-900 mr-1">{influencer.trustScore}</span>
-                    <div className="w-12 h-2 bg-gray-200 rounded-full">
-                      <div 
-                        className="h-2 bg-brand-teal rounded-full" 
-                        style={{ width: `${influencer.trustScore}%` }}
-                      ></div>
-                    </div>
+
+                <div className="pt-4 border-t border-slate-100">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-semibold text-brand-primary">Trust Score</span>
+                    <span className="text-sm font-bold text-slate-900">{influencer.trustScore}</span>
+                  </div>
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary"
+                      style={{ width: `${influencer.trustScore}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
-              
-              <button className="w-full mt-4 px-4 py-2 border border-brand-navy text-brand-navy rounded-lg hover:bg-brand-navy hover:text-white transition-colors font-medium">
+
+              <button className="w-full py-3 border border-slate-200 text-slate-700 rounded-xl hover:border-brand-primary hover:text-brand-primary transition-all duration-300 font-semibold bg-white group-hover:shadow-md">
                 View Profile
               </button>
             </div>
           ))}
         </div>
 
-        <div className="text-center mt-12">
-          <button className="btn-primary">
+        <div className="text-center mt-16">
+          <button className="btn-primary text-lg px-8 py-4 shadow-xl">
             Browse All Verified Influencers
           </button>
         </div>

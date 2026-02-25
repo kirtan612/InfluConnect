@@ -17,7 +17,7 @@ const ForgotPassword = () => {
       setError('Invalid email format')
       return
     }
-    
+
     try {
       const response = await fetch('http://localhost:8000/api/auth/forgot-password', {
         method: 'POST',
@@ -26,11 +26,11 @@ const ForgotPassword = () => {
         },
         body: JSON.stringify({ email }),
       })
-      
+
       if (!response.ok) {
         throw new Error('Failed to send reset email')
       }
-      
+
       setSubmitted(true)
     } catch (err) {
       console.error('Password reset error:', err)
@@ -40,27 +40,33 @@ const ForgotPassword = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="bg-white rounded-xl shadow-lg p-8">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Background Decorations */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-brand-primary/20 rounded-full blur-[100px]"></div>
+        <div className="absolute top-[20%] -right-[10%] w-[40%] h-[40%] bg-brand-secondary/20 rounded-full blur-[100px]"></div>
+      </div>
+
+      <div className="max-w-md w-full space-y-8 relative z-10">
+        <div className="card-glass p-8 md:p-10">
           <div className="text-center mb-8">
-            <div className="mb-4 flex justify-center">
+            <div className="mb-6 flex justify-center">
               <Logo size="lg" variant="icon" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
               {submitted ? 'Check your email' : 'Forgot Password?'}
             </h2>
-            <p className="text-gray-600 mt-2">
-              {submitted 
+            <p className="text-slate-500 mt-2">
+              {submitted
                 ? 'We sent a password reset link to your email'
                 : 'Enter your email and we\'ll send you a reset link'}
             </p>
           </div>
 
           {!submitted ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
                   Email Address
                 </label>
                 <input
@@ -71,34 +77,34 @@ const ForgotPassword = () => {
                     setEmail(e.target.value)
                     setError('')
                   }}
-                  className={`w-full px-3 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${error ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`input-glass w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all ${error ? 'border-red-300 focus:ring-red-200' : ''}`}
                   placeholder="Enter your email"
                 />
-                {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+                {error && <p className="text-red-500 text-xs mt-1 ml-1">{error}</p>}
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+                className="btn-primary w-full py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
               >
                 Send Reset Link
               </button>
             </form>
           ) : (
             <div className="text-center">
-              <div className="mb-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mb-8">
+                <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto shadow-inner border border-green-100">
+                  <svg className="w-10 h-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
               </div>
-              <p className="text-gray-600 mb-6">
-                If an account exists for {email}, you will receive a password reset link shortly.
+              <p className="text-slate-600 mb-8 leading-relaxed">
+                If an account exists for <span className="font-semibold text-slate-900">{email}</span>, you will receive a password reset link shortly.
               </p>
               <Link
                 to="/signin"
-                className="inline-block bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
+                className="btn-primary w-full inline-block py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
               >
                 Back to Sign In
               </Link>
@@ -106,9 +112,9 @@ const ForgotPassword = () => {
           )}
 
           {!submitted && (
-            <p className="text-center text-sm text-gray-600 mt-6">
+            <p className="text-center text-sm text-slate-500 mt-8">
               Remember your password?{' '}
-              <Link to="/signin" className="text-blue-600 hover:text-blue-700 font-semibold">
+              <Link to="/signin" className="text-brand-primary hover:text-brand-secondary font-bold transition-colors">
                 Sign in
               </Link>
             </p>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Logo from './Logo'
 import Notifications from './Notifications'
@@ -8,11 +8,25 @@ import ErrorMessage from './ErrorMessage'
 import EmptyState from './EmptyState'
 import companyService from '../services/companyService'
 import collaborationService from '../services/collaborationService'
+import { ChevronLeft, ChevronRight, LogOut, Menu, Building2, Search, ClipboardList, Handshake, Send } from 'lucide-react'
 
 const CompanyDashboard = () => {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('profile')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'profile'
+
+  const setActiveTab = (tabId) => {
+    setSearchParams({ tab: tabId })
+  }
+
+  useEffect(() => {
+    if (!searchParams.get('tab')) {
+      setSearchParams({ tab: activeTab }, { replace: true })
+    }
+  }, [])
+
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const { user, logout } = useAuth()
 
   const handleLogout = () => {
@@ -31,101 +45,94 @@ const CompanyDashboard = () => {
     )
   }
 
+
   const navigation = [
-    { id: 'profile', name: 'Company Profile', icon: '🏢' },
-    { id: 'discover', name: 'Discover', icon: '🔍' },
-    { id: 'campaigns', name: 'Campaigns', icon: '📋' },
-    { id: 'collaborations', name: 'Collaborations', icon: '🤝' },
-    { id: 'requests', name: 'Requests', icon: '📤' }
+    { id: 'profile', name: 'Company Profile', icon: Building2, color: 'text-blue-500', shadow: 'shadow-[0_2px_8px_rgba(59,130,246,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(59,130,246,0.2)] hover:text-blue-600' },
+    { id: 'discover', name: 'Discover', icon: Search, color: 'text-violet-500', shadow: 'shadow-[0_2px_8px_rgba(139,92,246,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(139,92,246,0.2)] hover:text-violet-600' },
+    { id: 'campaigns', name: 'Campaigns', icon: ClipboardList, color: 'text-rose-500', shadow: 'shadow-[0_2px_8px_rgba(244,63,110,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(244,63,110,0.2)] hover:text-rose-600' },
+    { id: 'collaborations', name: 'Collaborations', icon: Handshake, color: 'text-emerald-500', shadow: 'shadow-[0_2px_8px_rgba(16,185,129,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)] hover:text-emerald-600' },
+    { id: 'requests', name: 'Requests', icon: Send, color: 'text-indigo-500', shadow: 'shadow-[0_2px_8px_rgba(99,102,241,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)] hover:text-indigo-600' }
   ]
 
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Logo size="md" />
-              </div>
-            </div>
+    <div className="flex h-screen overflow-hidden bg-[#f4f7fb]">
+      {/* Sidebar */}
+      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} flex flex-col bg-slate-50 transition-all duration-300 relative z-40 border-r border-slate-200/50 shadow-[12px_0_30px_rgba(226,232,240,0.8)]`}>
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="absolute -right-3 top-8 bg-white text-slate-600 border border-slate-200 p-1.5 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:scale-110 transition-transform z-50 flex items-center justify-center hover:bg-slate-50"
+        >
+          {isSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+        </button>
 
-            <div className="hidden md:flex items-center space-x-1">
-              {navigation.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105 ${activeTab === item.id
-                      ? 'text-brand-teal bg-teal-50 shadow-md transform scale-105'
-                      : 'text-gray-600 hover:text-brand-navy hover:bg-gray-50'
-                    }`}
-                >
-                  <span className="transition-transform duration-300 hover:scale-110">{item.icon}</span>
-                  <span>{item.name}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Notifications />
-
-              <div className="relative">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="w-9 h-9 bg-gradient-to-br from-brand-indigo to-brand-navy rounded-lg flex items-center justify-center">
-                    <span className="text-white text-sm font-semibold">{user.email[0].toUpperCase()}</span>
-                  </div>
-                  <div className="hidden md:block text-left">
-                    <div className="text-sm font-medium text-gray-900">{user.email}</div>
-                    <div className="text-xs text-gray-500">{user.role}</div>
-                  </div>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <div className="text-sm font-medium text-gray-900">{user.email}</div>
-                      <div className="text-xs text-gray-500">{user.role}</div>
-                    </div>
-                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Sign out</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className={`h-20 flex items-center ${isSidebarOpen ? 'px-6' : 'justify-center'} border-b border-slate-200/50`}>
+          {isSidebarOpen ? <Logo size="md" className="drop-shadow-[5px_5px_15px_5px_rgba(199,210,254,0.3)]" /> : <div className="text-indigo-600 font-bold text-xl drop-shadow-[5px_5px_15px_5px_rgba(199,210,254,0.3)]">IC</div>}
         </div>
 
-        <div className="md:hidden border-t border-gray-200">
-          <div className="px-4 py-2 flex space-x-1 overflow-x-auto">
-            {navigation.map((item) => (
+        <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 px-3">
+          {navigation.map((item) => {
+            const IconComponent = item.icon
+            const isActive = activeTab === item.id
+            return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap flex items-center space-x-1 ${activeTab === item.id
-                    ? 'text-brand-teal bg-teal-50'
-                    : 'text-gray-600'
-                  }`}
+                className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all duration-300 ${isActive
+                  ? `bg-white ${item.color} ${item.shadow} border border-slate-100 transform -translate-y-1`
+                  : `text-slate-500 ${item.hover} transform hover:-translate-y-1 bg-transparent hover:bg-white border hidden-border hover:border-slate-100`
+                  } ${!isSidebarOpen ? 'justify-center' : ''}`}
+                title={!isSidebarOpen ? item.name : ''}
               >
-                <span>{item.icon}</span>
-                <span>{item.name}</span>
+                <IconComponent size={20} className={isActive ? item.color : 'text-slate-400 group-hover:' + item.color} />
+                {isSidebarOpen && <span className="font-medium whitespace-nowrap">{item.name}</span>}
               </button>
-            ))}
-          </div>
+            )
+          })}
         </div>
-      </nav>
+      </aside>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'profile' && <CompanyProfile />}
-        {activeTab === 'discover' && <DiscoverInfluencers />}
-        {activeTab === 'campaigns' && <Campaigns />}
-        {activeTab === 'collaborations' && <BrandCollaborations />}
-        {activeTab === 'requests' && <Requests />}
-      </main>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="h-16 bg-white/80 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.05)] border-b border-indigo-50 flex items-center justify-end px-6 z-30 sticky top-0">
+          <div className="flex items-center space-x-4">
+            <Notifications />
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center space-x-3 p-2 rounded-xl hover:bg-[#f4f7fb] transition-colors"
+              >
+                <div className="w-9 h-9 bg-indigo-900 rounded-xl flex items-center justify-center shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50">
+                  <span className="text-teal-600 font-semibold">{user.email[0].toUpperCase()}</span>
+                </div>
+                <div className="hidden md:block text-left">
+                  <div className="text-sm font-medium text-slate-900">{user.email}</div>
+                  <div className="text-xs text-teal-600 font-semibold">{user.role}</div>
+                </div>
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-[20px_20px_50px_rgba(203,213,225,0.6)] border border-slate-100 py-2 z-50">
+                  <button onMouseDown={handleLogout} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-[#f4f7fb] hover:text-indigo-900 flex items-center space-x-2">
+                    <LogOut size={16} />
+                    <span>Log out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[#f4f7fb] p-6 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            {activeTab === 'profile' && <CompanyProfile />}
+            {activeTab === 'discover' && <DiscoverInfluencers />}
+            {activeTab === 'campaigns' && <Campaigns />}
+            {activeTab === 'collaborations' && <BrandCollaborations />}
+            {activeTab === 'requests' && <Requests />}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
@@ -178,7 +185,7 @@ const CompanyProfile = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm p-8">
+      <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-8">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-6">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
@@ -202,7 +209,7 @@ const CompanyProfile = () => {
       </div>
 
       {editing ? (
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Profile</h3>
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -212,7 +219,7 @@ const CompanyProfile = () => {
                   type="text"
                   value={formData.company_name}
                   onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 />
               </div>
               <div>
@@ -221,7 +228,7 @@ const CompanyProfile = () => {
                   type="text"
                   value={formData.industry}
                   onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 />
               </div>
             </div>
@@ -231,7 +238,7 @@ const CompanyProfile = () => {
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
               />
             </div>
             <div className="flex justify-end space-x-3">
@@ -241,7 +248,7 @@ const CompanyProfile = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Company Information</h3>
           <div className="space-y-2">
             <p className="text-gray-600"><span className="font-medium">Industry:</span> {profile.industry || 'Not set'}</p>
@@ -373,7 +380,7 @@ const DiscoverInfluencers = () => {
         <p className="text-gray-600 mt-1">Find verified creators that match your brand</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
@@ -382,7 +389,7 @@ const DiscoverInfluencers = () => {
               value={filters.category}
               onChange={(e) => setFilters({ ...filters, category: e.target.value })}
               placeholder="e.g., Tech Reviews"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
             />
           </div>
           <div>
@@ -391,7 +398,7 @@ const DiscoverInfluencers = () => {
               type="number"
               value={filters.min_trust_score}
               onChange={(e) => setFilters({ ...filters, min_trust_score: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
             />
           </div>
           <div className="flex items-end">
@@ -409,51 +416,63 @@ const DiscoverInfluencers = () => {
       </div>
 
       {influencers.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {influencers.map((influencer) => (
-            <div key={influencer.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-brand-indigo to-brand-navy rounded-xl flex items-center justify-center">
-                  <span className="text-white font-semibold">
-                    {influencer.display_name ? influencer.display_name[0].toUpperCase() : 'U'}
-                  </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2 pb-6 px-2">
+          {influencers.map((influencer, index) => {
+            const shadowColors = [
+              'shadow-[0_8px_24px_-4px_rgba(91,110,245,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(91,110,245,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(23,163,152,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(23,163,152,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(168,85,247,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(168,85,247,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(244,63,110,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(244,63,110,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(245,158,11,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(245,158,11,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(14,165,233,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(14,165,233,0.5)]'
+            ];
+            const activeShadow = shadowColors[index % shadowColors.length];
+
+            return (
+              <div key={influencer.id} className={`relative bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-100/80 p-6 transition-all duration-300 hover:-translate-y-1.5 ${activeShadow}`}>
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-indigo-900 rounded-xl flex items-center justify-center">
+                    <span className="text-white font-semibold">
+                      {influencer.display_name ? influencer.display_name[0].toUpperCase() : 'U'}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 flex items-center">
+                      {influencer.display_name || 'No name'}
+                      {influencer.verification_status === 'verified' && (
+                        <span className="ml-2 w-4 h-4 bg-teal-600 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">✓</span>
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-sm text-gray-600">{influencer.category || 'No category'}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 flex items-center">
-                    {influencer.display_name || 'No name'}
-                    {influencer.verification_status === 'verified' && (
-                      <span className="ml-2 w-4 h-4 bg-brand-teal rounded-full flex items-center justify-center">
-                        <span className="text-white text-xs">✓</span>
-                      </span>
-                    )}
-                  </h3>
-                  <p className="text-sm text-gray-600">{influencer.category || 'No category'}</p>
+
+                {influencer.bio && (
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{influencer.bio}</p>
+                )}
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="text-center p-2 bg-gray-50 rounded-lg">
+                    <div className="text-sm font-semibold text-gray-900">{influencer.trust_score}</div>
+                    <div className="text-xs text-gray-500">Trust Score</div>
+                  </div>
+                  <div className="text-center p-2 bg-gray-50 rounded-lg">
+                    <div className="text-sm font-semibold text-gray-900">{influencer.profile_completion}%</div>
+                    <div className="text-xs text-gray-500">Complete</div>
+                  </div>
                 </div>
+
+                <button
+                  onClick={() => handleSendRequestClick(influencer)}
+                  className="btn-primary w-full text-sm"
+                >
+                  Send Request
+                </button>
               </div>
-
-              {influencer.bio && (
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{influencer.bio}</p>
-              )}
-
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="text-center p-2 bg-gray-50 rounded-lg">
-                  <div className="text-sm font-semibold text-gray-900">{influencer.trust_score}</div>
-                  <div className="text-xs text-gray-500">Trust Score</div>
-                </div>
-                <div className="text-center p-2 bg-gray-50 rounded-lg">
-                  <div className="text-sm font-semibold text-gray-900">{influencer.profile_completion}%</div>
-                  <div className="text-xs text-gray-500">Complete</div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => handleSendRequestClick(influencer)}
-                className="btn-primary w-full text-sm"
-              >
-                Send Request
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <EmptyState
@@ -465,7 +484,7 @@ const DiscoverInfluencers = () => {
 
       {showCampaignModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-[20px_20px_50px_rgba(203,213,225,0.6)] max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Campaign</h3>
             <p className="text-sm text-gray-600 mb-4">
               Choose which campaign to send to {selectedInfluencer?.display_name}
@@ -474,17 +493,16 @@ const DiscoverInfluencers = () => {
               {campaigns.map((campaign) => {
                 const requestExists = hasExistingRequest(selectedInfluencer?.id, campaign.id)
                 const requestStatus = getRequestStatus(selectedInfluencer?.id, campaign.id)
-                
+
                 return (
                   <label
                     key={campaign.id}
-                    className={`flex items-center p-3 border-2 rounded-lg transition-all ${
-                      requestExists
-                        ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
-                        : selectedCampaign === campaign.id
-                        ? 'border-brand-teal bg-teal-50 cursor-pointer'
+                    className={`flex items-center p-3 border-2 rounded-lg transition-all ${requestExists
+                      ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+                      : selectedCampaign === campaign.id
+                        ? 'border-teal-600 bg-teal-50 cursor-pointer'
                         : 'border-gray-200 hover:border-gray-300 cursor-pointer'
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -623,41 +641,56 @@ const Campaigns = () => {
       </div>
 
       {campaigns.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {campaigns.map((campaign) => (
-            <div key={campaign.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{campaign.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{campaign.description}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2 pb-6 px-2">
+          {campaigns.map((campaign, index) => {
+            const shadowColors = [
+              'shadow-[0_8px_24px_-4px_rgba(91,110,245,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(91,110,245,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(23,163,152,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(23,163,152,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(168,85,247,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(168,85,247,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(244,63,110,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(244,63,110,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(245,158,11,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(245,158,11,0.5)]',
+              'shadow-[0_8px_24px_-4px_rgba(14,165,233,0.4)] hover:shadow-[0_16px_32px_-6px_rgba(14,165,233,0.5)]'
+            ];
+            const activeShadow = shadowColors[index % shadowColors.length];
+
+            return (
+              <div key={campaign.id} className={`relative bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-100/80 p-6 transition-all duration-300 hover:-translate-y-1.5 ${activeShadow}`}>
+                <div className="absolute -top-3 -right-3">
+                  <span className={`px-4 py-1.5 rounded-xl text-xs font-bold shadow-[0_8px_16px_rgba(0,0,0,0.12)] transform -translate-y-1 block ${campaign.status === 'active' ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-[0_8px_16px_rgba(16,185,129,0.4)]' :
+                    campaign.status === 'draft' ? 'bg-slate-100 text-slate-700 shadow-[0_8px_16px_rgba(148,163,184,0.4)]' :
+                      'bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-[0_8px_16px_rgba(245,158,11,0.4)]'
+                    }`}>
+                    {campaign.status}
+                  </span>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${campaign.status === 'active' ? 'bg-green-100 text-green-800' :
-                    campaign.status === 'draft' ? 'bg-gray-100 text-gray-800' :
-                      'bg-yellow-100 text-yellow-800'
-                  }`}>
-                  {campaign.status}
-                </span>
-              </div>
 
-              <div className="space-y-2 mb-4">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Platforms:</span> {campaign.platforms.join(', ')}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Budget:</span> ${campaign.budget_min} - ${campaign.budget_max}
-                </p>
-              </div>
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{campaign.name}</h3>
+                    <p className="text-sm text-gray-600 mt-1">{campaign.description}</p>
+                  </div>
+                </div>
 
-              {campaign.status === 'draft' && (
-                <button
-                  onClick={() => handleDeleteCampaign(campaign.id)}
-                  className="btn-secondary w-full text-sm"
-                >
-                  Delete
-                </button>
-              )}
-            </div>
-          ))}
+                <div className="space-y-2 mb-4">
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Platforms:</span> {campaign.platforms.map(p => p === 'LinkedIn' || p === 'TikTok' ? 'Facebook' : p).join(', ')}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Budget:</span> ₹{campaign.budget_min} - ₹{campaign.budget_max}
+                  </p>
+                </div>
+
+                {campaign.status === 'draft' && (
+                  <button
+                    onClick={() => handleDeleteCampaign(campaign.id)}
+                    className="btn-secondary w-full text-sm"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>
       ) : (
         <EmptyState
@@ -673,7 +706,7 @@ const Campaigns = () => {
 
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-[20px_20px_50px_rgba(203,213,225,0.6)] max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Campaign</h3>
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -687,7 +720,7 @@ const Campaigns = () => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 />
               </div>
               <div>
@@ -696,7 +729,7 @@ const Campaigns = () => {
                   rows={3}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 />
               </div>
               <div>
@@ -714,9 +747,9 @@ const Campaigns = () => {
                             setFormData({ ...formData, platforms: formData.platforms.filter(p => p !== platform) })
                           }
                         }}
-                        className="mr-2 h-4 w-4 text-brand-teal focus:ring-brand-teal border-gray-300 rounded"
+                        className="mr-2 h-4 w-4 text-teal-600 focus:ring-teal-600 border-gray-300 rounded"
                       />
-                      <span className="text-sm text-gray-700">{platform}</span>
+                      <span className="text-sm text-gray-700">{platform === 'LinkedIn' ? 'Facebook' : platform}</span>
                     </label>
                   ))}
                 </div>
@@ -729,7 +762,7 @@ const Campaigns = () => {
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     placeholder="e.g., Fashion, Tech, Beauty"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -738,7 +771,7 @@ const Campaigns = () => {
                     type="number"
                     value={formData.budget_min}
                     onChange={(e) => setFormData({ ...formData, budget_min: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -749,7 +782,7 @@ const Campaigns = () => {
                     type="number"
                     value={formData.budget_max}
                     onChange={(e) => setFormData({ ...formData, budget_max: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -803,7 +836,18 @@ const Requests = () => {
       {requests.length > 0 ? (
         <div className="space-y-4">
           {requests.map((request) => (
-            <div key={request.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div key={request.id} className="relative bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/50 p-6 hover:shadow-[0_20px_40px_rgba(203,213,225,0.4)] hover:-translate-y-1 transition-all duration-300">
+
+              {/* Floating Top-Right Status Badge */}
+              <div className="absolute -top-3 -right-3">
+                <span className={`px-4 py-1.5 rounded-xl text-xs font-bold shadow-[0_8px_16px_rgba(0,0,0,0.12)] transform -translate-y-1 block ${request.status === 'pending' ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-[0_8px_16px_rgba(245,158,11,0.4)]' :
+                  request.status === 'accepted' ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-[0_8px_16px_rgba(16,185,129,0.4)]' :
+                    'bg-gradient-to-br from-rose-400 to-rose-500 text-white shadow-[0_8px_16px_rgba(244,63,110,0.4)]'
+                  }`}>
+                  {request.status}
+                </span>
+              </div>
+
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Request #{request.id}</h3>
@@ -813,12 +857,6 @@ const Requests = () => {
                     Created: {new Date(request.created_at).toLocaleDateString()}
                   </p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                    request.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                  }`}>
-                  {request.status}
-                </span>
               </div>
             </div>
           ))}
@@ -900,15 +938,30 @@ const BrandCollaborations = () => {
       {collaborations.length > 0 ? (
         <div className="grid grid-cols-1 gap-6">
           {collaborations.map((collab) => (
-            <div key={collab.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div key={collab.id} className="relative bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/50 p-6 hover:shadow-[0_20px_40px_rgba(203,213,225,0.4)] hover:-translate-y-1 transition-all duration-300">
+
+              {/* Floating Top-Right Status Badge */}
+              <div className="absolute -top-3 -right-3">
+                <span className={`px-4 py-1.5 rounded-xl text-xs font-bold shadow-[0_8px_16px_rgba(0,0,0,0.12)] transform -translate-y-1 block ${collab.status === 'ACTIVE' || collab.status === 'CONTENT_APPROVED' || collab.status === 'COMPLETED'
+                  ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-[0_8px_16px_rgba(16,185,129,0.4)]'
+                  : collab.status === 'CANCELLED'
+                    ? 'bg-gradient-to-br from-rose-400 to-rose-500 text-white shadow-[0_8px_16px_rgba(244,63,110,0.4)]'
+                    : 'bg-gradient-to-br from-indigo-400 to-indigo-500 text-white shadow-[0_8px_16px_rgba(99,102,241,0.4)]'
+                  }`}>
+                  {getStatusLabel(collab.status)}
+                </span>
+              </div>
+
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">Collaboration #{collab.id}</h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(collab.status)}`}>
-                      {getStatusLabel(collab.status)}
-                    </span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${collab.payment_status === 'RELEASED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                      Collaboration
+                      <span className="text-sm font-semibold text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-lg border border-teal-100/50">
+                        {collab.id}
+                      </span>
+                    </h3>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${collab.payment_status === 'RELEASED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
                       Payment: {collab.payment_status}
                     </span>
                   </div>
@@ -924,8 +977,8 @@ const BrandCollaborations = () => {
                   <span className="font-semibold">{collab.progress_percentage}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-brand-teal h-2 rounded-full transition-all duration-300"
+                  <div
+                    className="bg-teal-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${collab.progress_percentage}%` }}
                   ></div>
                 </div>
@@ -1131,9 +1184,9 @@ const DeliverableModal = ({ collaboration, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-[20px_20px_50px_rgba(203,213,225,0.6)] max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Set Deliverables</h3>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
             {error}
@@ -1148,7 +1201,7 @@ const DeliverableModal = ({ collaboration, onClose, onSuccess }) => {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Describe what the influencer needs to deliver..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
             />
           </div>
 
@@ -1161,7 +1214,7 @@ const DeliverableModal = ({ collaboration, onClose, onSuccess }) => {
                   value={req}
                   onChange={(e) => handleRequirementChange(index, e.target.value)}
                   placeholder={`Requirement ${index + 1}`}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 />
                 {formData.requirements.length > 1 && (
                   <button
@@ -1175,7 +1228,7 @@ const DeliverableModal = ({ collaboration, onClose, onSuccess }) => {
             ))}
             <button
               onClick={handleAddRequirement}
-              className="text-sm text-brand-teal hover:text-teal-700 font-medium"
+              className="text-sm text-teal-600 hover:text-teal-700 font-medium"
             >
               + Add Requirement
             </button>
@@ -1187,7 +1240,7 @@ const DeliverableModal = ({ collaboration, onClose, onSuccess }) => {
               type="datetime-local"
               value={formData.deadline}
               onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
             />
           </div>
         </div>
@@ -1229,9 +1282,9 @@ const ApproveModal = ({ collaboration, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-xl shadow-[20px_20px_50px_rgba(203,213,225,0.6)] max-w-md w-full p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Approve Content</h3>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
             {error}
@@ -1246,7 +1299,7 @@ const ApproveModal = ({ collaboration, onClose, onSuccess }) => {
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="Share your thoughts on the submitted content..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
             />
           </div>
         </div>
@@ -1288,9 +1341,9 @@ const CompleteModal = ({ collaboration, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-xl shadow-[20px_20px_50px_rgba(203,213,225,0.6)] max-w-md w-full p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Complete Collaboration</h3>
-        
+
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
             This will mark the collaboration as complete and release the payment to the influencer.
@@ -1311,7 +1364,7 @@ const CompleteModal = ({ collaboration, onClose, onSuccess }) => {
               value={finalNotes}
               onChange={(e) => setFinalNotes(e.target.value)}
               placeholder="Any final thoughts or feedback..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
             />
           </div>
         </div>

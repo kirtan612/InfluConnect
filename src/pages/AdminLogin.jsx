@@ -18,7 +18,7 @@ const AdminLogin = () => {
 
     try {
       const userData = await adminLogin(email, password)
-      
+
       if (userData.role === 'ADMIN') {
         navigate('/admin/dashboard')
       } else {

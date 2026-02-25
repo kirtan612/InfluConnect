@@ -9,8 +9,8 @@ const Logo = ({ size = 'md', variant = 'full' }) => {
   }
 
   const LogoIcon = () => (
-    <div className={`${sizes[size].container} bg-gradient-to-br from-brand-navy via-brand-indigo to-brand-teal rounded-lg flex items-center justify-center shadow-sm`}>
-      <span className={`${sizes[size].text} font-bold text-white tracking-wider`}>
+    <div className={`${sizes[size].container} bg-gradient-to-br from-brand-primary/90 via-brand-secondary to-brand-accent rounded-lg flex items-center justify-center shadow-lg shadow-brand-primary/20 ring-1 ring-white/20`}>
+      <span className={`${sizes[size].text} font-bold text-white tracking-wider drop-shadow-sm`}>
         IC
       </span>
     </div>
@@ -21,10 +21,13 @@ const Logo = ({ size = 'md', variant = 'full' }) => {
   }
 
   return (
-    <div className="flex items-center space-x-3">
-      <LogoIcon />
-      <span className={`${sizes[size].fullText} font-bold bg-gradient-to-r from-brand-navy to-brand-teal bg-clip-text text-transparent`}>
-        InfluConnect
+    <div className="flex items-center space-x-3 group cursor-pointer">
+      <div className="group-hover:scale-105 transition-transform duration-300">
+        <LogoIcon />
+      </div>
+      <span className={`${sizes[size].fullText} font-extrabold tracking-tight`}>
+        <span className="text-slate-900 group-hover:text-brand-primary transition-colors duration-300">Influ</span>
+        <span className="text-brand-primary group-hover:text-brand-secondary transition-colors duration-300">Connect</span>
       </span>
     </div>
   )

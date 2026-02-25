@@ -30,11 +30,11 @@ const GoogleCallback = () => {
       try {
         const role = state === 'company' ? 'BRAND' : 'INFLUENCER'
         const data = await authService.googleAuth(code, role)
-        
+
         // Store tokens
         localStorage.setItem('token', data.access_token)
         localStorage.setItem('refresh_token', data.refresh_token)
-        
+
         // Set user
         const userData = {
           id: data.user_id,

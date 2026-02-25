@@ -53,7 +53,7 @@ const InfluencerProfileSetup = () => {
     if (!formData.bio.trim()) newErrors.bio = 'Bio is required'
     else if (formData.bio.length < 50) newErrors.bio = 'Bio must be at least 50 characters'
     if (formData.categories.length === 0) newErrors.categories = 'Select at least one category'
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -97,142 +97,138 @@ const InfluencerProfileSetup = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <div className="flex min-h-screen">
         {/* Left Side - Info */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 to-slate-700 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5"></div>
-          
-          <div className="relative z-10 flex flex-col justify-center px-12 xl:px-16">
+        <div className="hidden lg:flex lg:w-1/2 bg-slate-900 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/20 to-brand-secondary/20 mix-blend-overlay"></div>
+          {/* Animated Blobs */}
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-primary/30 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-brand-secondary/30 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2"></div>
+
+          <div className="relative z-10 flex flex-col justify-center px-16 h-full text-white">
             <div className="mb-12">
-              <div className="mb-4"><Logo size="lg" variant="icon" /></div>
-              <h1 className="text-4xl font-bold text-white mb-4">Complete Your Profile</h1>
-              <p className="text-xl text-gray-300 leading-relaxed">
-                Help brands discover you by completing your influencer profile
+              <div className="mb-8"><Logo size="lg" variant="icon" /></div>
+              <h1 className="text-4xl font-bold mb-6 tracking-tight">Complete Your Profile</h1>
+              <p className="text-xl text-slate-300 leading-relaxed">
+                Help brands discover you by completing your influencer profile with authentic details.
               </p>
             </div>
-            <div className="space-y-6">
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-xl">👤</span>
+            <div className="space-y-8">
+              {[
+                { icon: '👤', title: 'Tell us about yourself', description: 'Share your name, bio, and content categories' },
+                { icon: '📱', title: 'Connect your socials', description: 'Link your Instagram, YouTube, and Facebook profiles' },
+                { icon: '🚀', title: 'Get discovered', description: 'Start receiving collaboration requests from brands' }
+              ].map((item, index) => (
+                <div key={index} className="flex items-start space-x-5 group">
+                  <div className="flex-shrink-0 w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg border border-white/10 group-hover:bg-white/20 transition-all duration-300">
+                    <span className="text-2xl">{item.icon}</span>
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold text-lg mb-1">{item.title}</h3>
+                    <p className="text-slate-400 text-sm">{item.description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-white font-semibold mb-1">Tell us about yourself</h3>
-                  <p className="text-gray-300 text-sm">Share your name, bio, and content categories</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-xl">📱</span>
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold mb-1">Connect your socials</h3>
-                  <p className="text-gray-300 text-sm">Link your Instagram, YouTube, and Facebook profiles</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-xl">🚀</span>
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold mb-1">Get discovered</h3>
-                  <p className="text-gray-300 text-sm">Start receiving collaboration requests from brands</p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
 
         {/* Right Side - Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
-          <div className="max-w-md w-full">
-            <div className="bg-white rounded-xl shadow-lg p-8">
+        <div className="w-full lg:w-1/2 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12 relative bg-slate-50">
+          {/* Mobile Background Decoration */}
+          <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none lg:hidden">
+            <div className="absolute -top-[20%] -right-[20%] w-[80%] h-[80%] bg-brand-primary/10 rounded-full blur-[80px]"></div>
+          </div>
+
+          <div className="max-w-md w-full relative z-10">
+            <div className="card-glass p-8 md:p-10">
               {/* Progress Indicator */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Step {step} of 2</span>
-                  <span className="text-sm text-gray-500">{step === 1 ? 'Basic Info' : 'Social Links'}</span>
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-bold text-slate-700">Step {step} of 2</span>
+                  <span className="text-sm text-slate-500">{step === 1 ? 'Basic Info' : 'Social Links'}</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className="bg-brand-primary h-full rounded-full transition-all duration-500 ease-out shadow-lg shadow-brand-primary/30"
                     style={{ width: `${(step / 2) * 100}%` }}
                   ></div>
                 </div>
               </div>
 
               {errors.submit && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-red-600 text-sm">{errors.submit}</p>
+                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-center shadow-sm">
+                  <p className="text-red-600 text-sm font-medium">{errors.submit}</p>
                 </div>
               )}
 
               {step === 1 ? (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Tell Us About Yourself</h2>
-                    <p className="text-gray-600">This information will be visible to brands</p>
+                    <h2 className="text-3xl font-bold text-slate-900 mb-3 tracking-tight">Tell Us About Yourself</h2>
+                    <p className="text-slate-500">This information will be visible to brands</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Display Name *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Display Name *</label>
                     <input
                       type="text"
                       name="display_name"
                       value={formData.display_name}
                       onChange={handleInputChange}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.display_name ? 'border-red-500' : 'border-gray-300'}`}
+                      className={`input-glass w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all ${errors.display_name ? 'border-red-300 focus:ring-red-200' : ''}`}
                       placeholder="Your name or brand name"
                       disabled={loading}
                     />
-                    {errors.display_name && <p className="text-red-500 text-xs mt-1">{errors.display_name}</p>}
+                    {errors.display_name && <p className="text-red-500 text-xs mt-1 ml-1">{errors.display_name}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Bio *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Bio *</label>
                     <textarea
                       name="bio"
                       value={formData.bio}
                       onChange={handleInputChange}
                       rows={4}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.bio ? 'border-red-500' : 'border-gray-300'}`}
+                      className={`input-glass w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all resize-none ${errors.bio ? 'border-red-300 focus:ring-red-200' : ''}`}
                       placeholder="Tell brands about yourself and your content... (minimum 50 characters)"
                       maxLength="500"
                       disabled={loading}
                     />
                     <div className="flex justify-between items-center mt-1">
-                      {errors.bio && <p className="text-red-500 text-xs">{errors.bio}</p>}
-                      <p className="text-xs text-gray-500 ml-auto">{formData.bio.length}/500</p>
+                      {errors.bio ? <p className="text-red-500 text-xs ml-1">{errors.bio}</p> : <div></div>}
+                      <p className="text-xs text-slate-400 font-medium">{formData.bio.length}/500</p>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Content Categories *</label>
-                    <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto p-2 border rounded-lg">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Content Categories *</label>
+                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-2 border border-slate-200 rounded-xl custom-scrollbar">
                       {categories.map(cat => (
-                        <label key={cat} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                        <label key={cat} className={`flex items-center space-x-3 cursor-pointer p-2.5 rounded-lg transition-colors border ${formData.categories.includes(cat) ? 'bg-brand-primary/5 border-brand-primary/30' : 'hover:bg-slate-50 border-transparent'}`}>
                           <input
                             type="checkbox"
                             checked={formData.categories.includes(cat)}
                             onChange={() => handleCategoryToggle(cat)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-brand-primary border-slate-300 rounded focus:ring-brand-primary transition-all"
                             disabled={loading}
                           />
-                          <span className="text-sm text-gray-700">{cat}</span>
+                          <span className={`text-sm font-medium ${formData.categories.includes(cat) ? 'text-brand-primary' : 'text-slate-600'}`}>{cat}</span>
                         </label>
                       ))}
                     </div>
-                    {errors.categories && <p className="text-red-500 text-xs mt-1">{errors.categories}</p>}
+                    {errors.categories && <p className="text-red-500 text-xs mt-1 ml-1">{errors.categories}</p>}
                     {formData.categories.length > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">{formData.categories.length} selected</p>
+                      <p className="text-xs text-brand-primary font-medium mt-2 ml-1">{formData.categories.length} selected</p>
                     )}
                   </div>
 
-                  <div className="flex space-x-3 mt-6">
+                  <div className="flex space-x-3 mt-8">
                     <button
                       type="button"
                       onClick={handleSkip}
-                      className="flex-1 py-3 px-4 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="flex-1 py-3.5 px-4 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
                       disabled={loading}
                     >
                       Skip for Now
@@ -240,7 +236,7 @@ const InfluencerProfileSetup = () => {
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+                      className="flex-1 btn-primary py-3.5 px-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={loading}
                     >
                       Next
@@ -248,16 +244,16 @@ const InfluencerProfileSetup = () => {
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect Your Socials</h2>
-                    <p className="text-gray-600">Add your social media profiles (optional)</p>
+                    <h2 className="text-3xl font-bold text-slate-900 mb-3 tracking-tight">Connect Your Socials</h2>
+                    <p className="text-slate-500">Add your social media profiles (optional)</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       <span className="inline-flex items-center space-x-2">
-                        <span>📷</span>
+                        <span className="text-lg">📷</span>
                         <span>Instagram</span>
                       </span>
                     </label>
@@ -266,16 +262,16 @@ const InfluencerProfileSetup = () => {
                       name="instagram"
                       value={formData.instagram}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="input-glass w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all"
                       placeholder="https://instagram.com/username"
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       <span className="inline-flex items-center space-x-2">
-                        <span>▶️</span>
+                        <span className="text-lg">▶️</span>
                         <span>YouTube</span>
                       </span>
                     </label>
@@ -284,16 +280,16 @@ const InfluencerProfileSetup = () => {
                       name="youtube"
                       value={formData.youtube}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="input-glass w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all"
                       placeholder="https://youtube.com/@username"
                       disabled={loading}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       <span className="inline-flex items-center space-x-2">
-                        <span>📘</span>
+                        <span className="text-lg">📘</span>
                         <span>Facebook</span>
                       </span>
                     </label>
@@ -302,24 +298,24 @@ const InfluencerProfileSetup = () => {
                       name="facebook"
                       value={formData.facebook}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="input-glass w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all"
                       placeholder="https://facebook.com/username"
                       disabled={loading}
                     />
                   </div>
 
-                  <div className="flex space-x-3 mt-6">
+                  <div className="flex space-x-3 mt-8">
                     <button
                       type="button"
                       onClick={() => setStep(1)}
-                      className="flex-1 py-3 px-4 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="flex-1 py-3.5 px-4 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
                       disabled={loading}
                     >
                       Back
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 btn-primary py-3.5 px-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={loading}
                     >
                       {loading ? 'Saving...' : 'Complete Setup'}
@@ -329,7 +325,7 @@ const InfluencerProfileSetup = () => {
                   <button
                     type="button"
                     onClick={handleSkip}
-                    className="w-full text-sm text-gray-600 hover:text-gray-800 mt-2"
+                    className="w-full text-sm font-semibold text-slate-500 hover:text-slate-700 mt-4 transition-colors"
                     disabled={loading}
                   >
                     Skip and complete later

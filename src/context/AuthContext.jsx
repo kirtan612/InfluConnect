@@ -50,6 +50,46 @@ export const AuthProvider = ({ children }) => {
   }
 
   const login = async (email, password) => {
+    // Demo Login Logic
+    if (email === 'brand@demo.com') {
+      const demoUser = {
+        id: 'demo-brand-123',
+        email: 'brand@demo.com',
+        role: 'BRAND',
+        name: 'Demo Brand'
+      }
+      setUser(demoUser)
+      localStorage.setItem('token', 'demo-token-brand')
+      localStorage.setItem('refresh_token', 'demo-refresh-token')
+      return demoUser
+    }
+
+    if (email === 'infl@demo.com') {
+      const demoUser = {
+        id: 'demo-infl-123',
+        email: 'infl@demo.com',
+        role: 'INFLUENCER',
+        name: 'Demo Influencer'
+      }
+      setUser(demoUser)
+      localStorage.setItem('token', 'demo-token-infl')
+      localStorage.setItem('refresh_token', 'demo-refresh-token')
+      return demoUser
+    }
+
+    if (email === 'admin@demo.com') {
+      const demoUser = {
+        id: 'demo-admin-123',
+        email: 'admin@demo.com',
+        role: 'ADMIN',
+        name: 'Demo Admin'
+      }
+      setUser(demoUser)
+      localStorage.setItem('token', 'demo-token-admin')
+      localStorage.setItem('refresh_token', 'demo-refresh-token')
+      return demoUser
+    }
+
     const data = await authService.login(email, password)
     const userData = {
       id: data.user_id,
@@ -63,6 +103,20 @@ export const AuthProvider = ({ children }) => {
   }
 
   const adminLogin = async (email, password) => {
+    // Demo Admin Login
+    if (email === 'admin@demo.com') {
+      const demoUser = {
+        id: 'demo-admin-123',
+        email: 'admin@demo.com',
+        role: 'ADMIN',
+        name: 'Demo Admin'
+      }
+      setUser(demoUser)
+      localStorage.setItem('token', 'demo-token-admin')
+      localStorage.setItem('refresh_token', 'demo-refresh-token')
+      return demoUser
+    }
+
     const data = await authService.adminLogin(email, password)
     const userData = {
       id: data.user_id,

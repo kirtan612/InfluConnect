@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Logo from './Logo'
 import Notifications from './Notifications'
@@ -8,12 +8,26 @@ import ErrorMessage from './ErrorMessage'
 import EmptyState from './EmptyState'
 import influencerService from '../services/influencerService'
 import collaborationService from '../services/collaborationService'
+import { ChevronLeft, ChevronRight, LogOut, Menu, User, Award, CheckCircle, Target, Briefcase, Mail, Star, Check, Shield, Trophy, Rocket, Gem, Flame, Crown, Clapperboard, TrendingUp, Handshake } from 'lucide-react'
 
 const InfluencerDashboard = () => {
-  const [activeTab, setActiveTab] = useState('profile')
-  const [showUserMenu, setShowUserMenu] = useState(false)
-  const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = searchParams.get('tab') || 'profile'
+
+  const setActiveTab = (tabId) => {
+    setSearchParams({ tab: tabId })
+  }
+
+  useEffect(() => {
+    if (!searchParams.get('tab')) {
+      setSearchParams({ tab: activeTab }, { replace: true })
+    }
+  }, [])
+
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const { user, logout } = useAuth()
 
   const handleLogout = () => {
     logout()
@@ -31,104 +45,96 @@ const InfluencerDashboard = () => {
     )
   }
 
+
   const navigation = [
-    { id: 'profile', name: 'My Profile', icon: '👤' },
-    { id: 'achievements', name: 'Achievements', icon: '🏆' },
-    { id: 'verification', name: 'Verification', icon: '✓' },
-    { id: 'campaigns', name: 'Browse Campaigns', icon: '🎯' },
-    { id: 'collaborations', name: 'Collaborations', icon: '🤝' },
-    { id: 'requests', name: 'Requests', icon: '📬' }
+    { id: 'profile', name: 'My Profile', icon: User, color: 'text-blue-500', shadow: 'shadow-[0_2px_8px_rgba(59,130,246,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(59,130,246,0.2)] hover:text-blue-600' },
+    { id: 'achievements', name: 'Achievements', icon: Award, color: 'text-violet-500', shadow: 'shadow-[0_2px_8px_rgba(139,92,246,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(139,92,246,0.2)] hover:text-violet-600' },
+    { id: 'verification', name: 'Verification', icon: CheckCircle, color: 'text-emerald-500', shadow: 'shadow-[0_2px_8px_rgba(16,185,129,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)] hover:text-emerald-600' },
+    { id: 'campaigns', name: 'Browse Campaigns', icon: Target, color: 'text-rose-500', shadow: 'shadow-[0_2px_8px_rgba(244,63,110,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(244,63,110,0.2)] hover:text-rose-600' },
+    { id: 'collaborations', name: 'Collaborations', icon: Briefcase, color: 'text-indigo-500', shadow: 'shadow-[0_2px_8px_rgba(99,102,241,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)] hover:text-indigo-600' },
+    { id: 'requests', name: 'Requests', icon: Mail, color: 'text-cyan-500', shadow: 'shadow-[0_2px_8px_rgba(6,182,212,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(6,182,212,0.2)] hover:text-cyan-600' }
   ]
 
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Logo size="md" />
-              </div>
-            </div>
+    <div className="flex h-screen overflow-hidden bg-[#f4f7fb]">
+      {/* Sidebar */}
+      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} flex flex-col bg-slate-50 transition-all duration-300 relative z-40 border-r border-slate-200/50 shadow-[12px_0_30px_rgba(226,232,240,0.8)]`}>
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="absolute -right-3 top-8 bg-white text-slate-600 border border-slate-200 p-1.5 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:scale-110 transition-transform z-50 flex items-center justify-center hover:bg-slate-50"
+        >
+          {isSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+        </button>
 
-            <div className="hidden md:flex items-center space-x-1">
-              {navigation.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center space-x-2 hover:scale-105 ${activeTab === item.id
-                      ? 'text-brand-teal bg-teal-50 shadow-md transform scale-105'
-                      : 'text-gray-600 hover:text-brand-navy hover:bg-gray-50'
-                    }`}
-                >
-                  <span className="transition-transform duration-300 hover:scale-110">{item.icon}</span>
-                  <span>{item.name}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Notifications />
-
-              <div className="relative">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="w-9 h-9 bg-gradient-to-br from-brand-indigo to-brand-navy rounded-lg flex items-center justify-center">
-                    <span className="text-white text-sm font-semibold">{user.email[0].toUpperCase()}</span>
-                  </div>
-                  <div className="hidden md:block text-left">
-                    <div className="text-sm font-medium text-gray-900">{user.email}</div>
-                    <div className="text-xs text-gray-500">{user.role}</div>
-                  </div>
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <div className="text-sm font-medium text-gray-900">{user.email}</div>
-                      <div className="text-xs text-gray-500">{user.role}</div>
-                    </div>
-                    <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Sign out</button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className={`h-20 flex items-center ${isSidebarOpen ? 'px-6' : 'justify-center'} border-b border-slate-200/50`}>
+          {isSidebarOpen ? <Logo size="md" className="drop-shadow-[5px_5px_15px_5px_rgba(199,210,254,0.3)]" /> : <div className="text-indigo-600 font-bold text-xl drop-shadow-[5px_5px_15px_5px_rgba(199,210,254,0.3)]">IC</div>}
         </div>
 
-        <div className="md:hidden border-t border-gray-200">
-          <div className="px-4 py-2 flex space-x-1 overflow-x-auto">
-            {navigation.map((item) => (
+        <div className="flex-1 overflow-y-auto py-6 flex flex-col gap-2 px-3">
+          {navigation.map((item) => {
+            const IconComponent = item.icon
+            const isActive = activeTab === item.id
+            return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap flex items-center space-x-1 ${activeTab === item.id
-                    ? 'text-brand-teal bg-teal-50'
-                    : 'text-gray-600'
-                  }`}
+                className={`flex items-center space-x-3 px-3 py-3 rounded-xl transition-all duration-300 ${isActive
+                  ? `bg-white ${item.color} ${item.shadow} border border-slate-100 transform -translate-y-1`
+                  : `text-slate-500 ${item.hover} transform hover:-translate-y-1 bg-transparent hover:bg-white border hidden-border hover:border-slate-100`
+                  } ${!isSidebarOpen ? 'justify-center' : ''}`}
+                title={!isSidebarOpen ? item.name : ''}
               >
-                <span>{item.icon}</span>
-                <span>{item.name}</span>
+                <IconComponent size={20} className={isActive ? item.color : 'text-slate-400 group-hover:' + item.color} />
+                {isSidebarOpen && <span className="font-medium whitespace-nowrap">{item.name}</span>}
               </button>
-            ))}
-          </div>
+            )
+          })}
         </div>
-      </nav>
+      </aside>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'profile' && <MyProfile />}
-        {activeTab === 'achievements' && <Achievements />}
-        {activeTab === 'verification' && <Verification />}
-        {activeTab === 'campaigns' && <BrowseCampaigns />}
-        {activeTab === 'collaborations' && <InfluencerCollaborations />}
-        {activeTab === 'requests' && <Requests />}
-      </main>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="h-16 bg-white/80 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.05)] border-b border-indigo-50 flex items-center justify-end px-6 z-30 sticky top-0">
+          <div className="flex items-center space-x-4">
+            <Notifications />
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center space-x-3 p-2 rounded-xl hover:bg-[#f4f7fb] transition-colors"
+              >
+                <div className="w-9 h-9 bg-indigo-900 rounded-xl flex items-center justify-center shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50">
+                  <span className="text-teal-600 font-semibold">{user.email[0].toUpperCase()}</span>
+                </div>
+                <div className="hidden md:block text-left">
+                  <div className="text-sm font-medium text-slate-900">{user.email}</div>
+                  <div className="text-xs text-teal-600 font-semibold">{user.role}</div>
+                </div>
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-[20px_20px_50px_rgba(203,213,225,0.6)] border border-slate-100 py-2 z-50">
+                  <button onMouseDown={handleLogout} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-[#f4f7fb] hover:text-indigo-900 flex items-center space-x-2">
+                    <LogOut size={16} />
+                    <span>Log out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[#f4f7fb] p-6 md:p-8">
+          <div className="max-w-7xl mx-auto">
+            {activeTab === 'profile' && <MyProfile />}
+            {activeTab === 'achievements' && <Achievements />}
+            {activeTab === 'verification' && <Verification />}
+            {activeTab === 'campaigns' && <BrowseCampaigns />}
+            {activeTab === 'collaborations' && <InfluencerCollaborations />}
+            {activeTab === 'requests' && <Requests />}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
@@ -189,73 +195,87 @@ const MyProfile = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-brand-navy to-brand-indigo rounded-xl shadow-sm p-8 text-white">
+      <div className="bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50 border border-slate-100 p-8 text-slate-800 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 duration-300">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center space-x-6">
             <div className="relative">
-              <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border-2 border-white/30">
-                <span className="text-2xl font-bold text-white">
+              <div className="w-24 h-24 bg-indigo-50/80 backdrop-blur-sm rounded-xl flex items-center justify-center border-2 border-indigo-100 shadow-[0_8px_20px_rgba(99,102,241,0.15)]">
+                <span className="text-2xl font-bold text-indigo-600">
                   {profile.display_name ? profile.display_name[0].toUpperCase() : 'U'}
                 </span>
               </div>
               {profile.verification_status === 'verified' && (
-                <div className="absolute -top-2 -right-2 w-7 h-7 bg-brand-teal rounded-full flex items-center justify-center border-2 border-white">
+                <div className="absolute -top-2 -right-2 w-7 h-7 bg-teal-600 rounded-full flex items-center justify-center border-2 border-white">
                   <span className="text-white text-sm font-bold">✓</span>
                 </div>
               )}
-              <div className="absolute -bottom-2 -right-2">
-                <div className="relative w-10 h-10">
-                  <svg className="w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
-                    <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="3" fill="none" className="text-white/30" />
-                    <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="3" fill="none" strokeDasharray={`${profile.profile_completion * 1.005} 100.5`} className="text-brand-teal" />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">{profile.profile_completion}%</span>
-                  </div>
-                </div>
-              </div>
+
             </div>
             <div>
-              <h1 className="text-3xl font-bold mb-2 flex items-center">
+              <h1 className="text-3xl font-bold mb-2 flex items-center text-slate-900">
                 {profile.display_name || 'No name set'}
                 {profile.verification_status === 'verified' && (
-                  <span className="ml-3 w-6 h-6 bg-brand-teal rounded-full flex items-center justify-center">
+                  <span className="ml-3 w-6 h-6 bg-teal-600 rounded-full flex items-center justify-center">
                     <span className="text-white text-sm font-bold">✓</span>
                   </span>
                 )}
               </h1>
-              <p className="text-white/90 text-lg mb-2">{profile.category || 'No category set'}</p>
+              <p className="text-slate-600 text-sm font-medium mb-2">{profile.category || 'No category set'}</p>
             </div>
           </div>
           <button
             onClick={() => setEditing(!editing)}
-            className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-colors backdrop-blur-sm border border-white/30"
+            className="bg-white hover:bg-slate-50 text-indigo-600 shadow-[10px_10px_20px_8px_rgba(199,210,254,0.4)] px-4 py-2 rounded-lg font-medium transition-all duration-300 border border-slate-200 hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]"
           >
             {editing ? 'Cancel' : 'Edit Profile'}
           </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
-            <div className="text-2xl font-bold">{profile.trust_score}</div>
-            <div className="text-sm text-white/80">Trust Score</div>
+          <div className="bg-white rounded-2xl p-6 text-left border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-between relative overflow-hidden">
+            <div>
+              <div className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-1">Trust Score</div>
+              <div className="text-3xl font-extrabold text-slate-800">{profile.trust_score}</div>
+              <div className="absolute bottom-4 left-6 right-6 h-1.5 bg-indigo-50 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full" style={{ width: `${Math.min(profile.trust_score, 100)}%` }}></div>
+              </div>
+            </div>
+            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-[0_8px_16px_rgba(79,70,229,0.4)] text-white mb-4">
+              <Star className="text-white fill-current w-6 h-6" />
+            </div>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
-            <div className="text-2xl font-bold">{profile.profile_completion}%</div>
-            <div className="text-sm text-white/80">Complete</div>
+          <div className="bg-white rounded-2xl p-6 text-left border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-between relative overflow-hidden">
+            <div>
+              <div className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-1">Profile Complete</div>
+              <div className="text-3xl font-extrabold text-slate-800">{profile.profile_completion}%</div>
+              <div className="absolute bottom-4 left-6 right-6 h-1.5 bg-teal-50 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full" style={{ width: `${profile.profile_completion}%` }}></div>
+              </div>
+            </div>
+            <div className="w-12 h-12 bg-teal-500 rounded-xl flex items-center justify-center shadow-[0_8px_16px_rgba(20,184,166,0.4)] text-white mb-4">
+              <Check className="text-white w-6 h-6 stroke-[3]" />
+            </div>
           </div>
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center border border-white/20">
-            <div className="text-2xl font-bold">{profile.verification_status === 'verified' ? '✓' : '○'}</div>
-            <div className="text-sm text-white/80">Verified</div>
+          <div className="bg-white rounded-2xl p-6 text-left border border-slate-100 shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-1 transition-all duration-300 flex items-center justify-between relative overflow-hidden">
+            <div>
+              <div className="text-xs font-bold text-slate-500 tracking-wider uppercase mb-1">Status</div>
+              <div className="text-xl font-extrabold text-slate-800 mt-1">{profile.verification_status === 'verified' ? 'Verified' : 'Unverified'}</div>
+              <div className="absolute bottom-4 left-6 right-6 h-1.5 bg-fuchsia-50 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${profile.verification_status === 'verified' ? 'bg-gradient-to-r from-fuchsia-500 to-pink-500' : 'bg-slate-300'}`} style={{ width: '100%' }}></div>
+              </div>
+            </div>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white mb-4 ${profile.verification_status === 'verified' ? 'bg-fuchsia-500 shadow-[0_8px_16px_rgba(217,70,239,0.4)]' : 'bg-slate-400 shadow-[0_8px_16px_rgba(148,163,184,0.4)]'}`}>
+              <Shield className="text-white w-6 h-6 fill-current/20 stroke-2" />
+            </div>
           </div>
         </div>
 
         {trustExplanation && (
-          <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-            <p className="text-sm text-white/90">
+          <div className="mt-6 bg-indigo-50/50 rounded-lg p-4 border border-indigo-100 shadow-[5px_5px_15px_5px_rgba(199,210,254,0.3)]">
+            <p className="text-sm text-slate-700">
               <span className="font-medium">Trust Score Breakdown:</span> {trustExplanation.calculation_breakdown}
             </p>
-            <p className="text-xs text-white/70 mt-1">
+            <p className="text-xs text-slate-500 mt-2">
               Collaborations: {trustExplanation.collaboration_count} • Profile: {trustExplanation.profile_completion}% • Status: {trustExplanation.verification_status}
             </p>
           </div>
@@ -263,7 +283,7 @@ const MyProfile = () => {
       </div>
 
       {editing ? (
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Profile</h3>
           <div className="space-y-4">
             <div>
@@ -272,7 +292,7 @@ const MyProfile = () => {
                 type="text"
                 value={formData.display_name}
                 onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
               />
             </div>
             <div>
@@ -281,7 +301,7 @@ const MyProfile = () => {
                 type="text"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
               />
             </div>
             <div>
@@ -290,7 +310,7 @@ const MyProfile = () => {
                 rows={4}
                 value={formData.bio}
                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
               />
             </div>
             <div>
@@ -303,7 +323,7 @@ const MyProfile = () => {
                     value={formData.social_links?.instagram || ''}
                     onChange={(e) => setFormData({ ...formData, social_links: { ...(formData.social_links || {}), instagram: e.target.value } })}
                     placeholder="@username"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent text-sm"
                   />
                 </div>
                 <div>
@@ -313,17 +333,17 @@ const MyProfile = () => {
                     value={formData.social_links?.youtube || ''}
                     onChange={(e) => setFormData({ ...formData, social_links: { ...(formData.social_links || {}), youtube: e.target.value } })}
                     placeholder="channel URL"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">TikTok</label>
+                  <label className="block text-xs text-gray-500 mb-1">Facebook</label>
                   <input
                     type="text"
                     value={formData.social_links?.tiktok || ''}
                     onChange={(e) => setFormData({ ...formData, social_links: { ...(formData.social_links || {}), tiktok: e.target.value } })}
                     placeholder="@username"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent text-sm"
                   />
                 </div>
               </div>
@@ -336,13 +356,13 @@ const MyProfile = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">About</h3>
             <p className="text-gray-600 leading-relaxed">{profile.bio || 'No bio added yet'}</p>
           </div>
 
           {profile.social_links && Object.keys(profile.social_links).some(k => profile.social_links[k]) && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Social Media Profiles</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {profile.social_links.instagram && (
@@ -350,7 +370,7 @@ const MyProfile = () => {
                     href={profile.social_links.instagram.startsWith('http') ? profile.social_links.instagram : `https://instagram.com/${profile.social_links.instagram.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center space-x-3 p-4 bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg hover:shadow-md transition-shadow border border-pink-100"
+                    className="flex items-center space-x-3 p-4 bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg hover:shadow-[30px_30px_60px_rgba(203,213,225,0.7)] hover:-translate-y-1 transform transition-all duration-300 transition-shadow border border-pink-100"
                   >
                     <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
                       <span className="text-white text-lg">📷</span>
@@ -366,7 +386,7 @@ const MyProfile = () => {
                     href={profile.social_links.youtube.startsWith('http') ? profile.social_links.youtube : `https://youtube.com/${profile.social_links.youtube}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center space-x-3 p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-lg hover:shadow-md transition-shadow border border-red-100"
+                    className="flex items-center space-x-3 p-4 bg-gradient-to-br from-red-50 to-pink-50 rounded-lg hover:shadow-[30px_30px_60px_rgba(203,213,225,0.7)] hover:-translate-y-1 transform transition-all duration-300 transition-shadow border border-red-100"
                   >
                     <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center">
                       <span className="text-white text-lg">▶️</span>
@@ -382,7 +402,7 @@ const MyProfile = () => {
                     href={profile.social_links.facebook.startsWith('http') ? profile.social_links.facebook : `https://facebook.com/${profile.social_links.facebook}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center space-x-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg hover:shadow-md transition-shadow border border-blue-100"
+                    className="flex items-center space-x-3 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg hover:shadow-[30px_30px_60px_rgba(203,213,225,0.7)] hover:-translate-y-1 transform transition-all duration-300 transition-shadow border border-blue-100"
                   >
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                       <span className="text-white text-lg">📘</span>
@@ -398,13 +418,13 @@ const MyProfile = () => {
           )}
 
           {profile.platforms && profile.platforms.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Content Categories</h3>
               <div className="flex flex-wrap gap-2">
                 {profile.platforms.map((platform, index) => (
                   <span
                     key={index}
-                    className="px-4 py-2 bg-gradient-to-r from-brand-navy/10 to-brand-teal/10 text-brand-navy rounded-full text-sm font-medium border border-brand-navy/20"
+                    className="px-4 py-2 bg-gradient-to-r from-indigo-900/10 to-teal-600/10 text-indigo-900 rounded-full text-sm font-medium border border-indigo-900/20"
                   >
                     {platform}
                   </span>
@@ -431,11 +451,11 @@ const Achievements = () => {
     title: '',
     description: '',
     date: '',
-    icon: '🏆',
+    icon: 'Trophy',
     proof_link: ''
   })
 
-  const iconOptions = ['🏆', '⭐', '🎯', '🚀', '💎', '🔥', '👑', '🎬', '📈', '🤝']
+  const iconOptions = ['Trophy', 'Star', 'Target', 'Rocket', 'Gem', 'Flame', 'Crown', 'Clapperboard', 'TrendingUp', 'Handshake']
 
   const fetchAchievements = () => {
     setLoading(true)
@@ -488,7 +508,7 @@ const Achievements = () => {
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="btn-primary"
+          className="btn-primary shadow-[0_8px_16px_rgba(79,70,229,0.4)] hover:shadow-[0_12px_20px_rgba(79,70,229,0.5)]"
         >
           {showForm ? 'Cancel' : '+ Add Achievement'}
         </button>
@@ -501,22 +521,41 @@ const Achievements = () => {
       )}
 
       {showForm && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Achievement</h3>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Icon</label>
               <div className="flex space-x-2">
-                {iconOptions.map(icon => (
-                  <button
-                    key={icon}
-                    onClick={() => setFormData({ ...formData, icon })}
-                    className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-all ${formData.icon === icon ? 'bg-brand-teal/20 ring-2 ring-brand-teal scale-110' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                  >
-                    {icon}
-                  </button>
-                ))}
+                {iconOptions.map(iconName => {
+                  const iconConfig = {
+                    'Trophy': { icon: Trophy, color: 'text-amber-500', bg: 'bg-gradient-to-br from-amber-400 to-amber-600', shadow: 'shadow-lg shadow-amber-500/30 ring-amber-500' },
+                    'Star': { icon: Star, color: 'text-yellow-500', bg: 'bg-gradient-to-br from-yellow-400 to-yellow-600', shadow: 'shadow-lg shadow-yellow-500/30 ring-yellow-500' },
+                    'Target': { icon: Target, color: 'text-red-500', bg: 'bg-gradient-to-br from-red-400 to-red-600', shadow: 'shadow-lg shadow-red-500/30 ring-red-500' },
+                    'Rocket': { icon: Rocket, color: 'text-blue-500', bg: 'bg-gradient-to-br from-blue-400 to-blue-600', shadow: 'shadow-lg shadow-blue-500/30 ring-blue-500' },
+                    'Gem': { icon: Gem, color: 'text-emerald-500', bg: 'bg-gradient-to-br from-emerald-400 to-emerald-600', shadow: 'shadow-lg shadow-emerald-500/30 ring-emerald-500' },
+                    'Flame': { icon: Flame, color: 'text-orange-500', bg: 'bg-gradient-to-br from-orange-400 to-orange-600', shadow: 'shadow-lg shadow-orange-500/30 ring-orange-500' },
+                    'Crown': { icon: Crown, color: 'text-fuchsia-500', bg: 'bg-gradient-to-br from-fuchsia-400 to-fuchsia-600', shadow: 'shadow-lg shadow-fuchsia-500/30 ring-fuchsia-500' },
+                    'Clapperboard': { icon: Clapperboard, color: 'text-rose-500', bg: 'bg-gradient-to-br from-rose-400 to-rose-600', shadow: 'shadow-lg shadow-rose-500/30 ring-rose-500' },
+                    'TrendingUp': { icon: TrendingUp, color: 'text-teal-600', bg: 'bg-gradient-to-br from-teal-400 to-teal-600', shadow: 'shadow-lg shadow-teal-500/30 ring-teal-600' },
+                    'Handshake': { icon: Handshake, color: 'text-indigo-500', bg: 'bg-gradient-to-br from-indigo-400 to-indigo-600', shadow: 'shadow-lg shadow-indigo-500/30 ring-indigo-500' }
+                  }[iconName];
+
+                  const IconComp = iconConfig.icon;
+                  const isSelected = formData.icon === iconName;
+
+                  return (
+                    <button
+                      key={iconName}
+                      onClick={(e) => { e.preventDefault(); setFormData({ ...formData, icon: iconName }); }}
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${isSelected ? `${iconConfig.bg} ring-2 ring-offset-1 ${iconConfig.shadow} scale-110` : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                      title={iconName}
+                    >
+                      <IconComp size={20} className={isSelected ? 'text-white' : 'text-gray-500 hover:text-gray-700'} />
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div>
@@ -526,7 +565,7 @@ const Achievements = () => {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g., Reached 100K followers"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
               />
             </div>
             <div>
@@ -536,7 +575,7 @@ const Achievements = () => {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Tell us more about this achievement..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -547,7 +586,7 @@ const Achievements = () => {
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   placeholder="e.g., January 2024"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 />
               </div>
               <div>
@@ -557,7 +596,7 @@ const Achievements = () => {
                   value={formData.proof_link}
                   onChange={(e) => setFormData({ ...formData, proof_link: e.target.value })}
                   placeholder="https://..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 />
               </div>
             </div>
@@ -576,13 +615,28 @@ const Achievements = () => {
       )}
 
       {achievements.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {achievements.map(ach => (
-            <div key={ach.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 pb-8 px-2">
+          {achievements.map((ach) => {
+            const iconConfig = {
+              'Trophy': { icon: Trophy, bg: 'from-amber-400 to-amber-600', iconShadow: 'shadow-[0_8px_16px_rgba(245,158,11,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(245,158,11,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(245,158,11,0.4)]' },
+              'Star': { icon: Star, bg: 'from-yellow-400 to-yellow-600', iconShadow: 'shadow-[0_8px_16px_rgba(234,179,8,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(234,179,8,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(234,179,8,0.4)]' },
+              'Target': { icon: Target, bg: 'from-red-400 to-red-600', iconShadow: 'shadow-[0_8px_16px_rgba(239,68,68,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(239,68,68,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(239,68,68,0.4)]' },
+              'Rocket': { icon: Rocket, bg: 'from-blue-400 to-blue-600', iconShadow: 'shadow-[0_8px_16px_rgba(59,130,246,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(59,130,246,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(59,130,246,0.4)]' },
+              'Gem': { icon: Gem, bg: 'from-emerald-400 to-emerald-600', iconShadow: 'shadow-[0_8px_16px_rgba(16,185,129,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(16,185,129,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(16,185,129,0.4)]' },
+              'Flame': { icon: Flame, bg: 'from-orange-400 to-orange-600', iconShadow: 'shadow-[0_8px_16px_rgba(249,115,22,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(249,115,22,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(249,115,22,0.4)]' },
+              'Crown': { icon: Crown, bg: 'from-fuchsia-400 to-fuchsia-600', iconShadow: 'shadow-[0_8px_16px_rgba(217,70,239,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(217,70,239,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(217,70,239,0.4)]' },
+              'Clapperboard': { icon: Clapperboard, bg: 'from-rose-400 to-rose-600', iconShadow: 'shadow-[0_8px_16px_rgba(244,63,110,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(244,63,110,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(244,63,110,0.4)]' },
+              'TrendingUp': { icon: TrendingUp, bg: 'from-teal-400 to-teal-600', iconShadow: 'shadow-[0_8px_16px_rgba(20,184,166,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(20,184,166,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(20,184,166,0.4)]' },
+              'Handshake': { icon: Handshake, bg: 'from-indigo-400 to-indigo-600', iconShadow: 'shadow-[0_8px_16px_rgba(99,102,241,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(99,102,241,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(99,102,241,0.4)]' }
+            }[ach.icon] || { icon: Trophy, bg: 'from-amber-400 to-amber-600', iconShadow: 'shadow-[0_8px_16px_rgba(245,158,11,0.4)]', cardShadow: 'shadow-[0_12px_30px_-6px_rgba(245,158,11,0.25)] hover:shadow-[0_24px_50px_-10px_rgba(245,158,11,0.4)]' };
+
+            const IconComponent = iconConfig.icon;
+
+            return (
+              <div key={ach.id} className={`relative bg-white/90 backdrop-blur-md rounded-2xl border border-slate-100/80 p-6 transition-all duration-300 hover:-translate-y-2.5 ${iconConfig.cardShadow}`}>              <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                    {ach.icon || '🏆'}
+                  <div className={`w-12 h-12 bg-gradient-to-br ${iconConfig.bg} rounded-xl flex items-center justify-center shrink-0 ${iconConfig.iconShadow} transform -translate-y-1`}>
+                    <IconComponent size={24} className="text-white drop-shadow-md" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">{ach.title}</h3>
@@ -593,7 +647,7 @@ const Achievements = () => {
                       <p className="text-xs text-gray-500 mt-2">{ach.date}</p>
                     )}
                     {ach.proof_link && (
-                      <a href={ach.proof_link} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-teal hover:underline mt-1 inline-block">
+                      <a href={ach.proof_link} target="_blank" rel="noopener noreferrer" className="text-xs text-teal-600 hover:underline mt-1 inline-block">
                         View proof →
                       </a>
                     )}
@@ -607,8 +661,9 @@ const Achievements = () => {
                   ×
                 </button>
               </div>
-            </div>
-          ))}
+              </div>
+            )
+          })}
         </div>
       ) : (
         <EmptyState
@@ -620,8 +675,9 @@ const Achievements = () => {
             onClick: () => setShowForm(true)
           }}
         />
-      )}
-    </div>
+      )
+      }
+    </div >
   )
 }
 
@@ -686,13 +742,13 @@ const Verification = () => {
         <p className="text-gray-600 mt-1">Your verification is managed by InfluConnect administrators</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6">
+      <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-900">Current Status</h2>
           <div className={`px-4 py-2 rounded-full text-sm font-medium ${status === 'verified' ? 'bg-green-100 text-green-800' :
-              status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                status === 'rejected' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
+            status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+              status === 'rejected' ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'
             }`}>
             {status === 'verified' ? '✓ Verified' :
               status === 'pending' ? '⏳ Under Review' :
@@ -704,7 +760,7 @@ const Verification = () => {
         {status === 'verified' && verificationData.latest_request && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-brand-teal rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-xl">✓</span>
               </div>
               <div>
@@ -769,7 +825,7 @@ const Verification = () => {
       </div>
 
       {showSubmitForm && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Submit Verification</h3>
           <div className="space-y-4">
             <div>
@@ -778,7 +834,7 @@ const Verification = () => {
                 type="number"
                 value={metrics.followers}
                 onChange={(e) => setMetrics({ ...metrics, followers: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 placeholder="e.g., 125000"
               />
             </div>
@@ -789,7 +845,7 @@ const Verification = () => {
                 step="0.1"
                 value={metrics.engagement_rate}
                 onChange={(e) => setMetrics({ ...metrics, engagement_rate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 placeholder="e.g., 4.2"
               />
             </div>
@@ -799,7 +855,7 @@ const Verification = () => {
                 type="number"
                 value={metrics.average_likes}
                 onChange={(e) => setMetrics({ ...metrics, average_likes: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                 placeholder="e.g., 5200"
               />
             </div>
@@ -881,12 +937,12 @@ const BrowseCampaigns = () => {
         <p className="text-gray-600 mt-1">Discover and apply to active brand campaigns</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-4">
+      <div className="bg-white rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50 p-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Category</label>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setCategoryFilter(null)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!categoryFilter ? 'bg-brand-teal text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!categoryFilter ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
           >
             All
           </button>
@@ -894,7 +950,7 @@ const BrowseCampaigns = () => {
             <button
               key={cat}
               onClick={() => setCategoryFilter(cat)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${categoryFilter === cat ? 'bg-brand-teal text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${categoryFilter === cat ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
               {cat}
             </button>
@@ -905,11 +961,22 @@ const BrowseCampaigns = () => {
       {campaigns.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {campaigns.map(campaign => (
-            <div key={campaign.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div key={campaign.id} className="relative bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/50 p-6 hover:shadow-[0_20px_40px_rgba(203,213,225,0.4)] hover:-translate-y-1 transition-all duration-300">
+
+              {/* Floating Top-Right Status Badge */}
+              <div className="absolute -top-3 -right-3">
+                <span className={`px-4 py-1.5 rounded-xl text-xs font-bold shadow-[0_8px_16px_rgba(0,0,0,0.12)] transform -translate-y-1 block ${campaign.status === 'active' ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-[0_8px_16px_rgba(16,185,129,0.4)]' :
+                  campaign.status === 'draft' ? 'bg-slate-100 text-slate-700 shadow-[0_8px_16px_rgba(148,163,184,0.4)]' :
+                    'bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-[0_8px_16px_rgba(245,158,11,0.4)]'
+                  }`}>
+                  {campaign.status}
+                </span>
+              </div>
+
               <div className="mb-4">
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">{campaign.name}</h3>
                 <p className="text-sm text-gray-600 mb-3">{campaign.description}</p>
-                
+
                 <div className="flex flex-wrap gap-2 mb-3">
                   {campaign.category && (
                     <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
@@ -918,23 +985,22 @@ const BrowseCampaigns = () => {
                   )}
                   {campaign.platforms && campaign.platforms.length > 0 && campaign.platforms.map((platform, idx) => (
                     <span key={idx} className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                      {platform}
+                      {platform === 'LinkedIn' || platform === 'TikTok' ? 'Facebook' : platform}
                     </span>
                   ))}
                 </div>
 
                 <div className="space-y-1 text-sm text-gray-600">
                   {campaign.budget_min && campaign.budget_max && (
-                    <p><span className="font-medium">Budget:</span> ${campaign.budget_min} - ${campaign.budget_max}</p>
+                    <p><span className="font-medium">Budget:</span> ₹{campaign.budget_min} - ₹{campaign.budget_max}</p>
                   )}
-                  <p><span className="font-medium">Status:</span> <span className="text-green-600 font-medium">{campaign.status}</span></p>
                 </div>
               </div>
 
               <button
                 onClick={() => handleApply(campaign.id)}
                 disabled={applying === campaign.id}
-                className="w-full bg-brand-teal hover:bg-teal-600 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-teal-600 hover:bg-teal-600 text-white py-2 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {applying === campaign.id ? 'Applying...' : 'Apply to Campaign'}
               </button>
@@ -1015,8 +1081,8 @@ const Requests = () => {
               key={tab.id}
               onClick={() => setFilter(tab.id)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${filter === tab.id
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white text-gray-900 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-slate-100/50'
+                : 'text-gray-600 hover:text-gray-900'
                 }`}
             >
               <span>{tab.name}</span>
@@ -1029,17 +1095,22 @@ const Requests = () => {
       {filteredRequests.length > 0 ? (
         <div className="space-y-4">
           {filteredRequests.map((request) => (
-            <div key={request.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div key={request.id} className="relative bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/50 p-6 hover:shadow-[0_20px_40px_rgba(203,213,225,0.4)] hover:-translate-y-1 transition-all duration-300">
+
+              {/* Floating Top-Right Status Badge */}
+              <div className="absolute -top-3 -right-3">
+                <span className={`px-4 py-1.5 rounded-xl text-xs font-bold shadow-[0_8px_16px_rgba(0,0,0,0.12)] transform -translate-y-1 block ${request.status === 'pending' ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-[0_8px_16px_rgba(245,158,11,0.4)]' :
+                  request.status === 'accepted' ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-[0_8px_16px_rgba(16,185,129,0.4)]' :
+                    'bg-gradient-to-br from-rose-400 to-rose-500 text-white shadow-[0_8px_16px_rgba(244,63,110,0.4)]'
+                  }`}>
+                  {request.status}
+                </span>
+              </div>
+
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">{request.campaign_name}</h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        request.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                      }`}>
-                      {request.status}
-                    </span>
                   </div>
                   <p className="text-sm text-gray-600 mb-1">
                     <span className="font-medium">Brand:</span> {request.brand_name}
@@ -1062,7 +1133,7 @@ const Requests = () => {
                   <button
                     onClick={() => handleUpdateStatus(request.id, 'accepted')}
                     disabled={actionLoading === request.id}
-                    className="px-4 py-2 text-sm font-medium text-white bg-brand-teal hover:bg-teal-600 rounded-lg transition-colors disabled:opacity-50"
+                    className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-600 rounded-lg transition-colors disabled:opacity-50"
                   >
                     {actionLoading === request.id ? '...' : 'Accept'}
                   </button>
@@ -1164,14 +1235,24 @@ const InfluencerCollaborations = () => {
       {collaborations.length > 0 ? (
         <div className="grid grid-cols-1 gap-6">
           {collaborations.map((collab) => (
-            <div key={collab.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div key={collab.id} className="relative bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/50 p-6 hover:shadow-[0_20px_40px_rgba(203,213,225,0.4)] hover:-translate-y-1 transition-all duration-300">
+
+              {/* Floating Top-Right Status Badge */}
+              <div className="absolute -top-3 -right-3">
+                <span className={`px-4 py-1.5 rounded-xl text-xs font-bold shadow-[0_8px_16px_rgba(0,0,0,0.12)] transform -translate-y-1 block ${collab.status === 'ACTIVE' || collab.status === 'CONTENT_APPROVED' || collab.status === 'COMPLETED'
+                  ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-[0_8px_16px_rgba(16,185,129,0.4)]'
+                  : collab.status === 'CANCELLED'
+                    ? 'bg-gradient-to-br from-rose-400 to-rose-500 text-white shadow-[0_8px_16px_rgba(244,63,110,0.4)]'
+                    : 'bg-gradient-to-br from-indigo-400 to-indigo-500 text-white shadow-[0_8px_16px_rgba(99,102,241,0.4)]'
+                  }`}>
+                  {getStatusLabel(collab.status)}
+                </span>
+              </div>
+
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">Collaboration #{collab.id}</h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(collab.status)}`}>
-                      {getStatusLabel(collab.status)}
-                    </span>
                   </div>
                   <p className="text-sm text-gray-600">Campaign ID: {collab.campaign_id}</p>
                 </div>
@@ -1184,8 +1265,8 @@ const InfluencerCollaborations = () => {
                   <span className="font-semibold">{collab.progress_percentage}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-brand-teal h-2 rounded-full transition-all duration-300"
+                  <div
+                    className="bg-teal-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${collab.progress_percentage}%` }}
                   ></div>
                 </div>
@@ -1200,7 +1281,7 @@ const InfluencerCollaborations = () => {
                     <ul className="space-y-1 mb-2">
                       {collab.deliverables.requirements.map((req, idx) => (
                         <li key={idx} className="text-sm text-gray-600 flex items-start">
-                          <span className="text-brand-teal mr-2">✓</span>
+                          <span className="text-teal-600 mr-2">✓</span>
                           {req}
                         </li>
                       ))}
@@ -1328,7 +1409,7 @@ const SubmitContentModal = ({ collaboration, onClose, onSuccess }) => {
 
   const handleSubmit = async () => {
     const validLinks = contentLinks.filter(link => link.url.trim())
-    
+
     if (validLinks.length === 0) {
       setError('At least one content link is required')
       return
@@ -1351,9 +1432,9 @@ const SubmitContentModal = ({ collaboration, onClose, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-[20px_20px_50px_rgba(203,213,225,0.6)] max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Submit Content</h3>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
             {error}
@@ -1374,19 +1455,18 @@ const SubmitContentModal = ({ collaboration, onClose, onSuccess }) => {
                   </button>
                 )}
               </div>
-              
+
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
                   <select
                     value={link.platform}
                     onChange={(e) => handleLinkChange(index, 'platform', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                   >
                     <option value="Instagram">Instagram</option>
                     <option value="YouTube">YouTube</option>
-                    <option value="TikTok">TikTok</option>
-                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="LinkedIn">Facebook</option>
                     <option value="Twitter">Twitter</option>
                     <option value="Facebook">Facebook</option>
                   </select>
@@ -1399,7 +1479,7 @@ const SubmitContentModal = ({ collaboration, onClose, onSuccess }) => {
                     value={link.url}
                     onChange={(e) => handleLinkChange(index, 'url', e.target.value)}
                     placeholder="https://..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                   />
                 </div>
 
@@ -1410,7 +1490,7 @@ const SubmitContentModal = ({ collaboration, onClose, onSuccess }) => {
                     value={link.description}
                     onChange={(e) => handleLinkChange(index, 'description', e.target.value)}
                     placeholder="Brief description of the content"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -1419,7 +1499,7 @@ const SubmitContentModal = ({ collaboration, onClose, onSuccess }) => {
 
           <button
             onClick={handleAddLink}
-            className="text-sm text-brand-teal hover:text-teal-700 font-medium"
+            className="text-sm text-teal-600 hover:text-teal-700 font-medium"
           >
             + Add Another Content Link
           </button>

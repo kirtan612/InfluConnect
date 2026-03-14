@@ -5,6 +5,9 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+import httpx
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 from app.core.config import settings
 from app.core.security import (
@@ -18,7 +21,7 @@ from app.db.models.influencer import InfluencerProfile
 from app.db.models.brand import BrandProfile
 from app.schemas.user import (
     UserCreate, UserLogin, TokenResponse, RefreshTokenRequest,
-    ForgotPasswordRequest, ResetPasswordRequest
+    ForgotPasswordRequest, ResetPasswordRequest, GoogleAuthRequest
 )
 from app.services.trust_engine import TrustEngine
 from app.services.email_service import send_password_reset_email
@@ -76,7 +79,7 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
     
     # Generate tokens
     access_token = create_access_token(
-        data={"sub": str(db_user.id), "role": db_user.role.value}
+        data={"sub": str(db_user.id), "role": db_user.role.value, "profile_complete": False}
     )
     refresh_token = create_refresh_token(
         data={"sub": str(db_user.id), "role": db_user.role.value}
@@ -87,7 +90,8 @@ def signup(user_data: UserCreate, db: Session = Depends(get_db)):
         refresh_token=refresh_token,
         user_id=db_user.id,
         email=db_user.email,
-        role=db_user.role
+        role=db_user.role,
+        profile_complete=False  # New users need to complete profile
     )
 
 
@@ -99,7 +103,7 @@ def login(
     """
     User login endpoint.
     Validates email and password.
-    Returns access and refresh tokens.
+    Returns access and refresh tokens with profile completion status.
     
     Note: Using OAuth2PasswordRequestForm which expects:
     - username (maps to email in our case)
@@ -128,9 +132,22 @@ def login(
             detail="User account is inactive"
         )
     
+    # Check profile completion
+    profile_complete = False
+    if user.role == UserRole.INFLUENCER and user.influencer_profile:
+        # Profile is complete if they have display_name and at least one social link
+        profile = user.influencer_profile
+        profile_complete = bool(profile.display_name and profile.social_links)
+    elif user.role == UserRole.BRAND and user.brand_profile:
+        # Profile is complete if they have company_name that's not "Unnamed"
+        profile = user.brand_profile
+        profile_complete = bool(profile.company_name and profile.company_name != "Unnamed")
+    elif user.role == UserRole.ADMIN:
+        profile_complete = True  # Admins don't need profile setup
+    
     # Generate tokens
     access_token = create_access_token(
-        data={"sub": str(user.id), "role": user.role.value}
+        data={"sub": str(user.id), "role": user.role.value, "profile_complete": profile_complete}
     )
     refresh_token = create_refresh_token(
         data={"sub": str(user.id), "role": user.role.value}
@@ -141,8 +158,10 @@ def login(
         refresh_token=refresh_token,
         user_id=user.id,
         email=user.email,
-        role=user.role
+        role=user.role,
+        profile_complete=profile_complete
     )
+
 
 
 @router.post("/admin/login", response_model=TokenResponse)
@@ -392,3 +411,187 @@ def reset_password(
     return {
         "message": "Password reset successful. You can now login with your new password."
     }
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_auth(
+    request: GoogleAuthRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Google OAuth authentication endpoint.
+    Exchanges authorization code for user info and creates/logs in user.
+    """
+    print(f"\n{'='*60}")
+    print(f"Google OAuth Debug Info")
+    print(f"{'='*60}")
+    print(f"Received code: {request.code[:20]}...")
+    print(f"Role: {request.role}")
+    print(f"Client ID configured: {settings.GOOGLE_CLIENT_ID[:20] if settings.GOOGLE_CLIENT_ID else 'NOT SET'}...")
+    print(f"Client Secret configured: {'YES' if settings.GOOGLE_CLIENT_SECRET else 'NO'}")
+    print(f"Frontend URL: {settings.FRONTEND_URL}")
+    print(f"{'='*60}\n")
+    
+    # Validate configuration
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Google OAuth not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env"
+        )
+    
+    try:
+        # Exchange authorization code for access token
+        async with httpx.AsyncClient() as client:
+            token_url = "https://oauth2.googleapis.com/token"
+            token_data = {
+                "code": request.code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": f"{settings.FRONTEND_URL}/auth/google/callback",
+                "grant_type": "authorization_code",
+            }
+            
+            print(f"Requesting token from Google...")
+            print(f"Redirect URI: {token_data['redirect_uri']}")
+            
+            token_response = await client.post(token_url, data=token_data)
+            
+            print(f"Token response status: {token_response.status_code}")
+            
+            if token_response.status_code != 200:
+                error_detail = token_response.json() if token_response.text else "Unknown error"
+                print(f"Token exchange failed: {error_detail}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to exchange authorization code: {error_detail}"
+                )
+            
+            token_json = token_response.json()
+            access_token_google = token_json.get("access_token")
+            id_token_str = token_json.get("id_token")
+            
+            if not id_token_str:
+                print("No ID token in response")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No ID token received from Google"
+                )
+            
+            print(f"✓ Token exchange successful")
+            
+            # Get user info from Google using access token (more reliable than ID token verification)
+            userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+            userinfo_response = await client.get(
+                userinfo_url,
+                headers={"Authorization": f"Bearer {access_token_google}"}
+            )
+            
+            if userinfo_response.status_code != 200:
+                print(f"Failed to get user info: {userinfo_response.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to get user information from Google"
+                )
+            
+            userinfo = userinfo_response.json()
+            email = userinfo.get("email")
+            google_id = userinfo.get("id")
+            name = userinfo.get("name", "")
+            
+            print(f"✓ User info retrieved: {email}")
+            
+            if not email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email not provided by Google"
+                )
+            
+            # Check if user exists
+            user = db.query(User).filter(User.email == email).first()
+            
+            is_new_user = False
+            if user:
+                print(f"✓ Existing user found: {email}")
+                # User exists, log them in
+                if user.is_suspended:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="User account is suspended"
+                    )
+                
+                if not user.is_active:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="User account is inactive"
+                    )
+            else:
+                print(f"✓ Creating new user: {email}")
+                is_new_user = True
+                # Create new user
+                user = User(
+                    email=email,
+                    password_hash=hash_password(google_id),  # Use Google ID as password
+                    role=request.role
+                )
+                db.add(user)
+                db.flush()
+                
+                # Create role-specific profile
+                if request.role == UserRole.INFLUENCER:
+                    influencer_profile = InfluencerProfile(user_id=user.id)
+                    db.add(influencer_profile)
+                    print(f"✓ Created influencer profile")
+                elif request.role == UserRole.BRAND:
+                    brand_profile = BrandProfile(
+                        user_id=user.id,
+                        company_name=name if name else "Unnamed"
+                    )
+                    db.add(brand_profile)
+                    print(f"✓ Created brand profile")
+                
+                db.commit()
+                db.refresh(user)
+            
+            # Check profile completion for existing users
+            profile_complete = False
+            if not is_new_user:
+                if user.role == UserRole.INFLUENCER and user.influencer_profile:
+                    profile = user.influencer_profile
+                    profile_complete = bool(profile.display_name and profile.social_links)
+                elif user.role == UserRole.BRAND and user.brand_profile:
+                    profile = user.brand_profile
+                    profile_complete = bool(profile.company_name and profile.company_name != "Unnamed")
+            
+            # Generate tokens
+            access_token = create_access_token(
+                data={"sub": str(user.id), "role": user.role.value, "profile_complete": profile_complete}
+            )
+            refresh_token = create_refresh_token(
+                data={"sub": str(user.id), "role": user.role.value}
+            )
+            
+            print(f"✓ JWT tokens generated for user {user.id}")
+            print(f"✓ Profile complete: {profile_complete}")
+            print(f"{'='*60}\n")
+            
+            return TokenResponse(
+                access_token=access_token,
+                refresh_token=refresh_token,
+                user_id=user.id,
+                email=user.email,
+                role=user.role,
+                profile_complete=profile_complete
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"\n❌ Google auth error: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        print(f"{'='*60}\n")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Google authentication failed: {str(e)}"
+        )

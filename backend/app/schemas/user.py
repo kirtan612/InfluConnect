@@ -32,6 +32,7 @@ class TokenResponse(BaseModel):
     user_id: int
     email: str
     role: UserRole
+    profile_complete: bool = True  # Default to True for backward compatibility
 
 
 class UserResponse(UserBase):
@@ -60,3 +61,9 @@ class ResetPasswordRequest(BaseModel):
     """Schema for reset password request."""
     token: str
     new_password: str = Field(..., min_length=8)
+
+
+class GoogleAuthRequest(BaseModel):
+    """Schema for Google OAuth authentication."""
+    code: str
+    role: UserRole

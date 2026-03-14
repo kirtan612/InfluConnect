@@ -13,8 +13,11 @@ const SignIn = () => {
   const { login } = useAuth()
 
   const handleGoogleSignIn = () => {
-    // Placeholder for real Google OAuth flow
-    console.log('Google sign-in initiated')
+    // Redirect to Google OAuth with INFLUENCER as default role for sign-in
+    // User can change role later if needed
+    const redirectUri = encodeURIComponent(window.location.origin + '/auth/google/callback')
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=email profile&state=INFLUENCER`
+    window.location.href = googleAuthUrl
   }
 
   const handleEmailSignIn = async (e) => {
@@ -24,14 +27,28 @@ const SignIn = () => {
 
     try {
       const data = await login(email, password)
-      if (data.role === 'BRAND') {
-        navigate('/company/dashboard')
-      } else if (data.role === 'INFLUENCER') {
-        navigate('/influencer/dashboard')
-      } else if (data.role === 'ADMIN') {
-        navigate('/admin/dashboard')
+      
+      // Check if profile is complete
+      if (data.profile_complete === false) {
+        // Redirect to profile setup
+        if (data.role === 'BRAND') {
+          navigate('/company/profile-setup')
+        } else if (data.role === 'INFLUENCER') {
+          navigate('/influencer/profile-setup')
+        } else {
+          navigate('/')
+        }
       } else {
-        navigate('/')
+        // Profile complete, go to dashboard
+        if (data.role === 'BRAND') {
+          navigate('/company/dashboard')
+        } else if (data.role === 'INFLUENCER') {
+          navigate('/influencer/dashboard')
+        } else if (data.role === 'ADMIN') {
+          navigate('/admin/dashboard')
+        } else {
+          navigate('/')
+        }
       }
     } catch (err) {
       setError(err.message || 'Unable to sign in')

@@ -12,24 +12,36 @@ const GoogleCallback = () => {
   useEffect(() => {
     const handleGoogleCallback = async () => {
       const code = searchParams.get('code')
-      const state = searchParams.get('state') // role: 'company' or 'influencer'
+      const state = searchParams.get('state') // role: 'BRAND' or 'INFLUENCER'
       const errorParam = searchParams.get('error')
 
+      console.log('Google Callback Debug:')
+      console.log('- Code:', code ? code.substring(0, 20) + '...' : 'NOT FOUND')
+      console.log('- State (role):', state)
+      console.log('- Error:', errorParam)
+
       if (errorParam) {
+        console.error('Google OAuth error:', errorParam)
         setError('Google authentication was cancelled')
         setTimeout(() => navigate('/signup'), 2000)
         return
       }
 
       if (!code) {
+        console.error('No authorization code in URL')
         setError('No authorization code received')
         setTimeout(() => navigate('/signup'), 2000)
         return
       }
 
       try {
-        const role = state === 'company' ? 'BRAND' : 'INFLUENCER'
+        // State should already be 'BRAND' or 'INFLUENCER' from the OAuth URL
+        const role = state || 'INFLUENCER'
+        console.log('Sending to backend - Code:', code.substring(0, 20) + '...', 'Role:', role)
+        
         const data = await authService.googleAuth(code, role)
+        console.log('✓ Authentication successful:', data.email, data.role)
+        console.log('✓ Profile complete:', data.profile_complete)
 
         // Store tokens
         localStorage.setItem('token', data.access_token)
@@ -39,21 +51,35 @@ const GoogleCallback = () => {
         const userData = {
           id: data.user_id,
           email: data.email,
-          role: data.role
+          role: data.role,
+          profile_complete: data.profile_complete
         }
         setUser(userData)
 
-        // Redirect to profile setup
-        if (data.role === 'BRAND') {
-          navigate('/company/profile-setup')
-        } else if (data.role === 'INFLUENCER') {
-          navigate('/influencer/profile-setup')
+        // Redirect based on profile completion
+        if (data.profile_complete === false) {
+          // New user or incomplete profile - go to profile setup
+          if (data.role === 'BRAND') {
+            navigate('/company/profile-setup')
+          } else if (data.role === 'INFLUENCER') {
+            navigate('/influencer/profile-setup')
+          } else {
+            navigate('/')
+          }
         } else {
-          navigate('/')
+          // Existing user with complete profile - go to dashboard
+          if (data.role === 'BRAND') {
+            navigate('/company/dashboard')
+          } else if (data.role === 'INFLUENCER') {
+            navigate('/influencer/dashboard')
+          } else {
+            navigate('/')
+          }
         }
       } catch (err) {
+        console.error('Google auth error:', err)
         setError(err.message || 'Authentication failed')
-        setTimeout(() => navigate('/signup'), 2000)
+        setTimeout(() => navigate('/signup'), 3000)
       }
     }
 

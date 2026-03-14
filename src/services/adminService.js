@@ -89,13 +89,97 @@ class AdminService {
   }
 
   async triggerAutomation(task) {
-    const response = await apiFetch(`/admin/automation/${task}`, {
+    // Map old task names to new endpoints
+    const taskMapping = {
+      'recalculate-trust': 'run/trust-score',
+      'downgrade-inactive': 'run/inactive-check', 
+      'flag-suspicious': 'run/suspicious-scan',
+      'update-completion': 'run/update-completion'
+    }
+    
+    const endpoint = taskMapping[task] || task
+    const response = await apiFetch(`/admin/automation/${endpoint}`, {
       method: 'POST'
     })
     
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Failed to trigger automation' }))
       throw new Error(error.detail || 'Failed to trigger automation')
+    }
+    
+    return response.json()
+  }
+
+  // New Celery automation methods
+  async getTaskStatus(taskId) {
+    const response = await apiFetch(`/admin/automation/tasks/status/${taskId}`)
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to get task status' }))
+      throw new Error(error.detail || 'Failed to get task status')
+    }
+    
+    return response.json()
+  }
+
+  async getActiveTasks() {
+    const response = await apiFetch('/admin/automation/tasks/active')
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to get active tasks' }))
+      throw new Error(error.detail || 'Failed to get active tasks')
+    }
+    
+    return response.json()
+  }
+
+  async triggerTrustScoreRecalculation() {
+    const response = await apiFetch('/admin/automation/run/trust-score', {
+      method: 'POST'
+    })
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to trigger trust score recalculation' }))
+      throw new Error(error.detail || 'Failed to trigger trust score recalculation')
+    }
+    
+    return response.json()
+  }
+
+  async triggerSuspiciousScan() {
+    const response = await apiFetch('/admin/automation/run/suspicious-scan', {
+      method: 'POST'
+    })
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to trigger suspicious scan' }))
+      throw new Error(error.detail || 'Failed to trigger suspicious scan')
+    }
+    
+    return response.json()
+  }
+
+  async triggerInactiveCheck() {
+    const response = await apiFetch('/admin/automation/run/inactive-check', {
+      method: 'POST'
+    })
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to trigger inactive check' }))
+      throw new Error(error.detail || 'Failed to trigger inactive check')
+    }
+    
+    return response.json()
+  }
+
+  async triggerProfileCompletionUpdate() {
+    const response = await apiFetch('/admin/automation/run/update-completion', {
+      method: 'POST'
+    })
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to trigger profile completion update' }))
+      throw new Error(error.detail || 'Failed to trigger profile completion update')
     }
     
     return response.json()

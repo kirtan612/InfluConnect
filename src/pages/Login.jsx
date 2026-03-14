@@ -23,15 +23,27 @@ const Login = () => {
     try {
       const userData = await login(email, password)
 
-      // Redirect based on role
-      if (userData.role === 'BRAND') {
-        navigate('/company/dashboard')
-      } else if (userData.role === 'INFLUENCER') {
-        navigate('/influencer/dashboard')
-      } else if (userData.role === 'ADMIN') {
-        navigate('/admin/dashboard')
+      // Check if profile is complete
+      if (userData.profile_complete === false) {
+        // Redirect to profile setup
+        if (userData.role === 'BRAND') {
+          navigate('/company/profile-setup')
+        } else if (userData.role === 'INFLUENCER') {
+          navigate('/influencer/profile-setup')
+        } else {
+          navigate('/')
+        }
       } else {
-        navigate('/')
+        // Profile complete, redirect based on role
+        if (userData.role === 'BRAND') {
+          navigate('/company/dashboard')
+        } else if (userData.role === 'INFLUENCER') {
+          navigate('/influencer/dashboard')
+        } else if (userData.role === 'ADMIN') {
+          navigate('/admin/dashboard')
+        } else {
+          navigate('/')
+        }
       }
     } catch (err) {
       setError(err.message || 'Unable to sign in')

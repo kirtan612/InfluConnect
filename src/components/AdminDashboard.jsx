@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Logo from './Logo'
 import Notifications from './Notifications'
+import AutomationDashboard from './AutomationDashboard'
 import adminService from '../services/adminService'
 import {
   LayoutDashboard,
@@ -22,7 +23,9 @@ import {
   BarChart2,
   TrendingDown,
   Flag,
-  ClipboardCheck
+  ClipboardCheck,
+  Zap,
+  RefreshCw
 } from 'lucide-react'
 
 const AdminDashboard = () => {
@@ -71,6 +74,7 @@ const AdminDashboard = () => {
   const secondaryNav = [
     { id: 'verification', name: 'Verification', icon: CheckCircle2, color: 'text-indigo-500', shadow: 'shadow-[0_2px_8px_rgba(99,102,241,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)] hover:text-indigo-600' },
     { id: 'reports', name: 'Reports', icon: AlertTriangle, color: 'text-cyan-500', shadow: 'shadow-[0_2px_8px_rgba(6,182,212,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(6,182,212,0.2)] hover:text-cyan-600' },
+    { id: 'automation', name: 'Automation', icon: Zap, color: 'text-purple-500', shadow: 'shadow-[0_2px_8px_rgba(168,85,247,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(168,85,247,0.2)] hover:text-purple-600' },
     { id: 'settings', name: 'Settings', icon: Settings, color: 'text-amber-500', shadow: 'shadow-[0_2px_8px_rgba(245,158,11,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(245,158,11,0.2)] hover:text-amber-600' }
   ]
 
@@ -159,6 +163,7 @@ const AdminDashboard = () => {
             {activeTab === 'campaigns' && <Campaigns />}
             {activeTab === 'verification' && <VerificationRequests />}
             {activeTab === 'reports' && <ReportsModeration />}
+            {activeTab === 'automation' && <AutomationDashboard />}
             {activeTab === 'settings' && <PlatformSettings />}
           </div>
         </main>
@@ -731,87 +736,248 @@ const ReportsModeration = () => {
 }
 
 const PlatformSettings = () => {
-  const [loading, setLoading] = useState(null)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
+  const [settings, setSettings] = useState({
+    trustScoreThreshold: 75,
+    inactivityDays: 30,
+    suspiciousActivityThreshold: 5,
+    profileCompletionMinimum: 60,
+    emailNotifications: true,
+    autoVerification: false,
+    maintenanceMode: false
+  })
+  const [loading, setLoading] = useState(false)
+  const [saved, setSaved] = useState(false)
 
-  const automationTasks = [
-    { id: 'recalculate-trust', name: 'Recalculate Trust Scores', description: 'Recalculate trust scores for all influencers based on current metrics', icon: 'BarChart2', color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100' },
-    { id: 'downgrade-inactive', name: 'Downgrade Inactive', description: 'Reduce trust scores for influencers who have been inactive', icon: 'TrendingDown', color: 'text-rose-500', bg: 'bg-rose-50 border-rose-100' },
-    { id: 'flag-suspicious', name: 'Flag Suspicious', description: 'Automatically flag profiles with suspicious activity patterns', icon: 'Flag', color: 'text-amber-500', bg: 'bg-amber-50 border-amber-100' },
-    { id: 'update-completion', name: 'Update Completion', description: 'Recalculate profile completion percentages for all influencers', icon: 'ClipboardCheck', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' }
-  ]
+  const handleSettingChange = (key, value) => {
+    setSettings(prev => ({ ...prev, [key]: value }))
+    setSaved(false)
+  }
 
-  const handleTrigger = async (task) => {
-    setLoading(task)
-    setResult(null)
-    setError(null)
+  const handleSave = async () => {
+    setLoading(true)
     try {
-      const res = await adminService.triggerAutomation(task)
-      setResult(res.message || 'Task completed successfully')
+      // Simulate API call to save settings
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
     } catch (err) {
-      setError(err.message)
+      console.error('Failed to save settings:', err)
     } finally {
-      setLoading(null)
+      setLoading(false)
     }
   }
+
+  const settingsGroups = [
+    {
+      title: 'Trust Score Configuration',
+      icon: Shield,
+      color: 'text-indigo-600',
+      bg: 'bg-indigo-50',
+      border: 'border-indigo-200',
+      settings: [
+        {
+          key: 'trustScoreThreshold',
+          label: 'Minimum Trust Score for Verification',
+          type: 'number',
+          description: 'Influencers need this score to be eligible for verification',
+          min: 0,
+          max: 100
+        },
+        {
+          key: 'suspiciousActivityThreshold',
+          label: 'Suspicious Activity Threshold',
+          type: 'number',
+          description: 'Number of flags before marking an account as suspicious',
+          min: 1,
+          max: 10
+        }
+      ]
+    },
+    {
+      title: 'User Management',
+      icon: Users,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+      border: 'border-emerald-200',
+      settings: [
+        {
+          key: 'inactivityDays',
+          label: 'Inactivity Period (Days)',
+          type: 'number',
+          description: 'Days before marking users as inactive',
+          min: 7,
+          max: 365
+        },
+        {
+          key: 'profileCompletionMinimum',
+          label: 'Minimum Profile Completion (%)',
+          type: 'number',
+          description: 'Required profile completion for full platform access',
+          min: 0,
+          max: 100
+        }
+      ]
+    },
+    {
+      title: 'System Preferences',
+      icon: Settings,
+      color: 'text-purple-600',
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
+      settings: [
+        {
+          key: 'emailNotifications',
+          label: 'Email Notifications',
+          type: 'toggle',
+          description: 'Send email notifications for important events'
+        },
+        {
+          key: 'autoVerification',
+          label: 'Auto-Verification',
+          type: 'toggle',
+          description: 'Automatically verify users meeting trust score threshold'
+        },
+        {
+          key: 'maintenanceMode',
+          label: 'Maintenance Mode',
+          type: 'toggle',
+          description: 'Enable maintenance mode to restrict platform access'
+        }
+      ]
+    }
+  ]
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="relative card-glass p-6 hover:shadow-2xl transition-all duration-300 overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-brand-primary/10 to-transparent rounded-full blur-2xl"></div>
         <div className="relative z-10">
-          <div>
-            <h1 className="text-2xl font-bold text-gradient mb-1">Platform Settings</h1>
-            <p className="text-sm text-slate-500">Automation and system maintenance tasks</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold text-gradient mb-1">Platform Settings</h1>
+              <p className="text-sm text-slate-500">Configure system behavior and thresholds</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              {saved && (
+                <div className="flex items-center space-x-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <CheckCircle2 className="text-emerald-500" size={16} />
+                  <span className="text-sm font-medium text-emerald-700">Saved</span>
+                </div>
+              )}
+              <button
+                onClick={handleSave}
+                disabled={loading}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-brand-primary to-purple-600 hover:from-purple-600 hover:to-brand-primary text-white rounded-lg font-medium transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw className="animate-spin" size={16} />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Settings size={16} />
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {result && (
-        <div className="card-glass p-4 bg-emerald-50/50 border-emerald-200">
-          <p className="text-emerald-700 font-medium">✓ {result}</p>
-        </div>
-      )}
-      {error && (
-        <div className="card-glass p-4 bg-red-50/50 border-red-200">
-          <p className="text-red-600 font-medium">{error}</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {automationTasks.map(task => {
-          const IconComp = {
-            'BarChart2': BarChart2,
-            'TrendingDown': TrendingDown,
-            'Flag': Flag,
-            'ClipboardCheck': ClipboardCheck
-          }[task.icon] || Settings;
-
+      <div className="space-y-6">
+        {settingsGroups.map((group, groupIndex) => {
+          const IconComponent = group.icon
           return (
-            <div key={task.id} className="relative card-glass p-6 hover:shadow-2xl transition-all duration-300 hover:translate-y-[-4px] overflow-hidden">
-              <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-brand-accent/10 to-transparent rounded-full blur-2xl"></div>
+            <div key={groupIndex} className="relative card-glass p-6 hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              <div className={`absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl ${group.bg} opacity-30 rounded-full blur-2xl`}></div>
               <div className="relative z-10">
-                <div className="flex items-start space-x-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border ${task.bg}`}>
-                    <IconComp className={`${task.color} drop-shadow-sm`} size={24} />
+                <div className="flex items-center space-x-3 mb-6">
+                  <div className={`w-10 h-10 ${group.bg} ${group.border} border rounded-xl flex items-center justify-center`}>
+                    <IconComponent className={group.color} size={20} />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-slate-900">{task.name}</h3>
-                    <p className="text-sm text-slate-600 mt-1">{task.description}</p>
-                    <button
-                      onClick={() => handleTrigger(task.id)}
-                      disabled={loading === task.id}
-                      className="mt-3 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-brand-primary to-purple-600 hover:from-purple-600 hover:to-brand-primary rounded-lg disabled:opacity-50 transition-all duration-300 shadow-md hover:shadow-lg"
-                    >
-                      {loading === task.id ? 'Running...' : 'Run Now'}
-                    </button>
-                  </div>
+                  <h2 className="text-lg font-semibold text-slate-900">{group.title}</h2>
+                </div>
+
+                <div className="space-y-4">
+                  {group.settings.map((setting) => (
+                    <div key={setting.key} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100">
+                      <div className="flex-1">
+                        <label className="text-sm font-medium text-slate-900">{setting.label}</label>
+                        <p className="text-xs text-slate-500 mt-1">{setting.description}</p>
+                      </div>
+                      <div className="ml-4">
+                        {setting.type === 'toggle' ? (
+                          <button
+                            onClick={() => handleSettingChange(setting.key, !settings[setting.key])}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              settings[setting.key] ? 'bg-brand-primary' : 'bg-slate-300'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                settings[setting.key] ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        ) : (
+                          <input
+                            type="number"
+                            value={settings[setting.key]}
+                            onChange={(e) => handleSettingChange(setting.key, parseInt(e.target.value))}
+                            min={setting.min}
+                            max={setting.max}
+                            className="w-20 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          );
+          )
         })}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="relative card-glass p-6 hover:shadow-2xl transition-all duration-300 overflow-hidden">
+        <div className="absolute top-0 left-0 w-48 h-48 bg-gradient-to-br from-brand-accent/10 to-transparent rounded-full blur-2xl"></div>
+        <div className="relative z-10">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button className="flex items-center space-x-3 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Users className="text-blue-600" size={16} />
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-medium text-slate-900">Export Users</div>
+                <div className="text-xs text-slate-500">Download user data</div>
+              </div>
+            </button>
+            
+            <button className="flex items-center space-x-3 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <BarChart2 className="text-green-600" size={16} />
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-medium text-slate-900">Generate Report</div>
+                <div className="text-xs text-slate-500">Platform analytics</div>
+              </div>
+            </button>
+            
+            <button className="flex items-center space-x-3 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors">
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                <Settings className="text-purple-600" size={16} />
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-medium text-slate-900">System Health</div>
+                <div className="text-xs text-slate-500">Check system status</div>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

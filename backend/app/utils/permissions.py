@@ -101,4 +101,4 @@ def check_brand_access_to_request(user: User, request_id: int, db: Session) -> b
             detail="Access denied to this request"
         )
     
-    return True
+    return True 

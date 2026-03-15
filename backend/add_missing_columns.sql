@@ -1,5 +1,4 @@
--- Add missing columns to influencer_profiles table
--- Run this SQL script in your PostgreSQL database
+
 
 -- Add profile_image_url column
 ALTER TABLE influencer_profiles 

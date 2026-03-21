@@ -6,9 +6,15 @@ import Notifications from './Notifications'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorMessage from './ErrorMessage'
 import EmptyState from './EmptyState'
+import AgreementModal from './AgreementModal'
+import DisputeModal from './DisputeModal'
+import ReportModal from './ReportModal'
+import EscrowDashboard from './EscrowDashboard'
+import WalletDisplay from './WalletDisplay'
 import companyService from '../services/companyService'
 import collaborationService from '../services/collaborationService'
-import { ChevronLeft, ChevronRight, LogOut, Menu, Building2, Search, ClipboardList, Handshake, Send } from 'lucide-react'
+import { acceptCampaignTerms } from '../services/agreementService'
+import { ChevronLeft, ChevronRight, LogOut, Menu, Building2, Search, ClipboardList, Handshake, Send, AlertTriangle, Flag, Wallet } from 'lucide-react'
 
 const CompanyDashboard = () => {
   const navigate = useNavigate()
@@ -51,7 +57,8 @@ const CompanyDashboard = () => {
     { id: 'discover', name: 'Discover', icon: Search, color: 'text-violet-500', shadow: 'shadow-[0_2px_8px_rgba(139,92,246,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(139,92,246,0.2)] hover:text-violet-600' },
     { id: 'campaigns', name: 'Campaigns', icon: ClipboardList, color: 'text-rose-500', shadow: 'shadow-[0_2px_8px_rgba(244,63,110,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(244,63,110,0.2)] hover:text-rose-600' },
     { id: 'collaborations', name: 'Collaborations', icon: Handshake, color: 'text-emerald-500', shadow: 'shadow-[0_2px_8px_rgba(16,185,129,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)] hover:text-emerald-600' },
-    { id: 'requests', name: 'Requests', icon: Send, color: 'text-indigo-500', shadow: 'shadow-[0_2px_8px_rgba(99,102,241,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)] hover:text-indigo-600' }
+    { id: 'requests', name: 'Requests', icon: Send, color: 'text-indigo-500', shadow: 'shadow-[0_2px_8px_rgba(99,102,241,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)] hover:text-indigo-600' },
+    { id: 'escrow', name: 'Escrow', icon: Wallet, color: 'text-purple-500', shadow: 'shadow-[0_2px_8px_rgba(168,85,247,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(168,85,247,0.2)] hover:text-purple-600' }
   ]
 
 
@@ -130,6 +137,7 @@ const CompanyDashboard = () => {
             {activeTab === 'campaigns' && <Campaigns />}
             {activeTab === 'collaborations' && <BrandCollaborations />}
             {activeTab === 'requests' && <Requests />}
+            {activeTab === 'escrow' && <EscrowDashboard />}
           </div>
         </main>
       </div>
@@ -557,14 +565,28 @@ const Campaigns = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showAgreement, setShowAgreement] = useState(false)
+  const [pendingCampaign, setPendingCampaign] = useState(null)
+  const [showDispute, setShowDispute] = useState(false)
+  const [showReport, setShowReport] = useState(false)
+  const [selectedCampaign, setSelectedCampaign] = useState(null)
+  const [wallet, setWallet] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     category: '',
     platforms: [],
     budget_min: '',
-    budget_max: ''
+    budget_max: '',
+    budget_amount: ''
   })
+
+  // Calculate escrow fees
+  const budgetAmount = parseFloat(formData.budget_amount) || 0
+  const brandFee = budgetAmount * 0.025
+  const totalPayment = budgetAmount + brandFee
+  const influencerFee = budgetAmount * 0.025
+  const influencerReceives = budgetAmount - influencerFee
 
   const fetchCampaigns = () => {
     setLoading(true)
@@ -597,13 +619,45 @@ const Campaigns = () => {
         return
       }
 
-      await companyService.createCampaign({
-        ...formData,
-        budget_min: formData.budget_min ? parseFloat(formData.budget_min) : null,
-        budget_max: formData.budget_max ? parseFloat(formData.budget_max) : null
-      })
+      // Validate escrow if budget_amount is provided
+      if (formData.budget_amount) {
+        const amount = parseFloat(formData.budget_amount)
+        if (amount <= 0) {
+          setError('Budget amount must be positive')
+          return
+        }
+        
+        // Check wallet balance
+        if (wallet && wallet.wallet_balance < totalPayment) {
+          setError(`Insufficient funds. Required: ₹${totalPayment.toLocaleString()} (Budget: ₹${budgetAmount.toLocaleString()} + Fee: ₹${brandFee.toLocaleString()}). Available: ₹${wallet.wallet_balance.toLocaleString()}`)
+          return
+        }
+      }
+
+      // Store campaign data and show agreement modal
+      setPendingCampaign(formData)
       setShowCreateModal(false)
-      setFormData({ name: '', description: '', category: '', platforms: [], budget_min: '', budget_max: '' })
+      setShowAgreement(true)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  const handleAgreementAccept = async () => {
+    try {
+      // Create campaign first
+      const newCampaign = await companyService.createCampaign({
+        ...pendingCampaign,
+        budget_min: pendingCampaign.budget_min ? parseFloat(pendingCampaign.budget_min) : null,
+        budget_max: pendingCampaign.budget_max ? parseFloat(pendingCampaign.budget_max) : null,
+        budget_amount: pendingCampaign.budget_amount ? parseFloat(pendingCampaign.budget_amount) : null
+      })
+      
+      // Then accept agreement for the created campaign
+      await acceptCampaignTerms(newCampaign.id, 'brand')
+      
+      setPendingCampaign(null)
+      setFormData({ name: '', description: '', category: '', platforms: [], budget_min: '', budget_max: '', budget_amount: '' })
       setError(null)
       fetchCampaigns()
     } catch (err) {
@@ -627,6 +681,9 @@ const Campaigns = () => {
 
   return (
     <div className="space-y-6">
+      {/* Wallet Display */}
+      <WalletDisplay compact={true} onBalanceUpdate={setWallet} />
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Campaigns</h1>
@@ -675,19 +732,73 @@ const Campaigns = () => {
                   <p className="text-sm text-gray-600">
                     <span className="font-medium">Platforms:</span> {campaign.platforms.map(p => p === 'LinkedIn' || p === 'TikTok' ? 'Facebook' : p).join(', ')}
                   </p>
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Budget:</span> ₹{campaign.budget_min} - ₹{campaign.budget_max}
-                  </p>
+                  {campaign.budget_amount ? (
+                    <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-3 border border-teal-100 space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">Budget:</span>
+                        <span className="font-semibold text-gray-900">₹{campaign.budget_amount?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">Platform Fee:</span>
+                        <span className="font-semibold text-amber-600">₹{campaign.brand_fee?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs border-t border-teal-200 pt-1">
+                        <span className="font-semibold text-gray-900">Total Paid:</span>
+                        <span className="font-bold text-teal-600">₹{campaign.total_payment?.toLocaleString()}</span>
+                      </div>
+                      {campaign.escrow_status && (
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-xs text-gray-600">Escrow:</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            campaign.escrow_status === 'locked' ? 'bg-amber-100 text-amber-700' :
+                            campaign.escrow_status === 'released' ? 'bg-green-100 text-green-700' :
+                            campaign.escrow_status === 'refunded' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {campaign.escrow_status}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Budget:</span> ₹{campaign.budget_min} - ₹{campaign.budget_max}
+                    </p>
+                  )}
                 </div>
 
-                {campaign.status === 'draft' && (
+                <div className="flex gap-2">
+                  {campaign.status === 'draft' && (
+                    <button
+                      onClick={() => handleDeleteCampaign(campaign.id)}
+                      className="btn-secondary flex-1 text-sm"
+                    >
+                      Delete
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleDeleteCampaign(campaign.id)}
-                    className="btn-secondary w-full text-sm"
+                    onClick={() => {
+                      setSelectedCampaign(campaign)
+                      setShowDispute(true)
+                    }}
+                    className="btn-secondary flex-1 text-sm flex items-center justify-center gap-1"
+                    title="File Dispute"
                   >
-                    Delete
+                    <AlertTriangle size={14} />
+                    Dispute
                   </button>
-                )}
+                  <button
+                    onClick={() => {
+                      setSelectedCampaign(campaign)
+                      setShowReport(true)
+                    }}
+                    className="btn-secondary flex-1 text-sm flex items-center justify-center gap-1"
+                    title="Report Issue"
+                  >
+                    <Flag size={14} />
+                    Report
+                  </button>
+                </div>
               </div>
             )
           })}
@@ -766,7 +877,49 @@ const Campaigns = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Budget</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Budget Amount (Escrow)</label>
+                  <input
+                    type="number"
+                    value={formData.budget_amount}
+                    onChange={(e) => setFormData({ ...formData, budget_amount: e.target.value })}
+                    placeholder="₹10,000"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              
+              {/* Escrow Breakdown */}
+              {budgetAmount > 0 && (
+                <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-4 border border-teal-100">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Escrow Breakdown</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Campaign Budget:</span>
+                      <span className="font-semibold text-gray-900">₹{budgetAmount.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Platform Fee (2.5%):</span>
+                      <span className="font-semibold text-amber-600">₹{brandFee.toLocaleString()}</span>
+                    </div>
+                    <div className="border-t border-teal-200 pt-2 flex justify-between">
+                      <span className="font-semibold text-gray-900">Total Payment:</span>
+                      <span className="font-bold text-teal-600">₹{totalPayment.toLocaleString()}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2">
+                      Influencer will receive: ₹{influencerReceives.toLocaleString()} (after 2.5% fee)
+                    </div>
+                    {wallet && wallet.wallet_balance < totalPayment && (
+                      <div className="text-xs text-red-600 mt-2 font-semibold">
+                        ⚠️ Insufficient funds! Available: ₹{wallet.wallet_balance.toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Min Budget (Range)</label>
                   <input
                     type="number"
                     value={formData.budget_min}
@@ -774,10 +927,8 @@ const Campaigns = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-600 focus:border-transparent"
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Budget</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Max Budget (Range)</label>
                   <input
                     type="number"
                     value={formData.budget_max}
@@ -794,6 +945,55 @@ const Campaigns = () => {
           </div>
         </div>
       )}
+
+      {/* Agreement Modal */}
+      {showAgreement && pendingCampaign && (
+        <AgreementModal
+          campaign={{
+            id: 'pending',
+            name: pendingCampaign.name,
+            description: pendingCampaign.description || 'New Campaign'
+          }}
+          userRole="brand"
+          onClose={() => {
+            setShowAgreement(false)
+            setPendingCampaign(null)
+            setShowCreateModal(true)
+          }}
+          onAccept={handleAgreementAccept}
+        />
+      )}
+
+      {/* Dispute Modal */}
+      {showDispute && selectedCampaign && (
+        <DisputeModal
+          campaign={selectedCampaign}
+          onClose={() => {
+            setShowDispute(false)
+            setSelectedCampaign(null)
+          }}
+          onDisputed={() => {
+            alert('Dispute filed successfully!')
+            fetchCampaigns()
+          }}
+        />
+      )}
+
+      {/* Report Modal */}
+      {showReport && selectedCampaign && (
+        <ReportModal
+          entityType="campaign"
+          entityId={selectedCampaign.id}
+          entityName={selectedCampaign.name}
+          onClose={() => {
+            setShowReport(false)
+            setSelectedCampaign(null)
+          }}
+          onReported={() => {
+            alert('Report submitted successfully!')
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -803,6 +1003,7 @@ const Requests = () => {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [actionLoading, setActionLoading] = useState(null)
 
   const fetchRequests = () => {
     setLoading(true)
@@ -823,27 +1024,116 @@ const Requests = () => {
     fetchRequests()
   }, [])
 
+  const handleAcceptRequest = async (request) => {
+    // Confirm acceptance
+    if (!window.confirm(`Accept application from ${request.influencer_name || 'Influencer ID ' + request.influencer_id} for campaign "${request.campaign_name || 'ID ' + request.campaign_id}"?\n\nThis will start the collaboration.`)) {
+      return
+    }
+    
+    setActionLoading(request.id)
+    try {
+      // Accept the collaboration request directly
+      await companyService.updateRequestStatus(request.id, 'accepted')
+      
+      alert('Request accepted successfully! Collaboration is now active.')
+      fetchRequests()
+    } catch (err) {
+      setError(err.message)
+      alert('Failed to accept request: ' + err.message)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleRejectRequest = async (requestId) => {
+    if (!window.confirm('Are you sure you want to reject this application?')) return
+    
+    setActionLoading(requestId)
+    try {
+      await companyService.updateRequestStatus(requestId, 'rejected')
+      alert('Request rejected')
+      fetchRequests()
+    } catch (err) {
+      setError(err.message)
+      alert('Failed to reject request: ' + err.message)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   if (loading) return <LoadingSpinner message="Loading requests..." />
   if (error) return <ErrorMessage error={error} onRetry={fetchRequests} />
+
+  const pendingRequests = requests.filter(r => r.status === 'pending')
+  const otherRequests = requests.filter(r => r.status !== 'pending')
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Collaboration Requests</h1>
-        <p className="text-gray-600 mt-1">Track your sent requests</p>
+        <p className="text-gray-600 mt-1">Manage incoming applications from influencers</p>
       </div>
 
-      {requests.length > 0 ? (
+      {/* Pending Requests */}
+      {pendingRequests.length > 0 && (
         <div className="space-y-4">
-          {requests.map((request) => (
+          <h2 className="text-xl font-semibold text-gray-900">Pending Applications ({pendingRequests.length})</h2>
+          {pendingRequests.map((request) => (
             <div key={request.id} className="relative bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/50 p-6 hover:shadow-[0_20px_40px_rgba(203,213,225,0.4)] hover:-translate-y-1 transition-all duration-300">
 
               {/* Floating Top-Right Status Badge */}
               <div className="absolute -top-3 -right-3">
-                <span className={`px-4 py-1.5 rounded-xl text-xs font-bold shadow-[0_8px_16px_rgba(0,0,0,0.12)] transform -translate-y-1 block ${request.status === 'pending' ? 'bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-[0_8px_16px_rgba(245,158,11,0.4)]' :
-                  request.status === 'accepted' ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-[0_8px_16px_rgba(16,185,129,0.4)]' :
-                    'bg-gradient-to-br from-rose-400 to-rose-500 text-white shadow-[0_8px_16px_rgba(244,63,110,0.4)]'
-                  }`}>
+                <span className="px-4 py-1.5 rounded-xl text-xs font-bold shadow-[0_8px_16px_rgba(0,0,0,0.12)] transform -translate-y-1 block bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-[0_8px_16px_rgba(245,158,11,0.4)]">
+                  Pending Review
+                </span>
+              </div>
+
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900">Application #{request.id}</h3>
+                  <p className="text-sm text-gray-600 mt-1">Campaign: {request.campaign_name || `ID ${request.campaign_id}`}</p>
+                  <p className="text-sm text-gray-600">Influencer: {request.influencer_name || `ID ${request.influencer_id}`}</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Applied: {new Date(request.created_at).toLocaleDateString()} at {new Date(request.created_at).toLocaleTimeString()}
+                  </p>
+                </div>
+                
+                <div className="flex gap-2 ml-4">
+                  <button
+                    onClick={() => handleAcceptRequest(request)}
+                    disabled={actionLoading === request.id}
+                    className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 font-medium"
+                  >
+                    {actionLoading === request.id ? 'Processing...' : 'Accept'}
+                  </button>
+                  <button
+                    onClick={() => handleRejectRequest(request.id)}
+                    disabled={actionLoading === request.id}
+                    className="px-4 py-2 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-lg hover:from-rose-600 hover:to-rose-700 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 font-medium"
+                  >
+                    {actionLoading === request.id ? 'Processing...' : 'Reject'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Other Requests */}
+      {otherRequests.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-gray-900">Request History</h2>
+          {otherRequests.map((request) => (
+            <div key={request.id} className="relative bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100/50 p-6 hover:shadow-[0_20px_40px_rgba(203,213,225,0.4)] hover:-translate-y-1 transition-all duration-300">
+
+              {/* Floating Top-Right Status Badge */}
+              <div className="absolute -top-3 -right-3">
+                <span className={`px-4 py-1.5 rounded-xl text-xs font-bold shadow-[0_8px_16px_rgba(0,0,0,0.12)] transform -translate-y-1 block ${
+                  request.status === 'accepted' 
+                    ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-[0_8px_16px_rgba(16,185,129,0.4)]' 
+                    : 'bg-gradient-to-br from-rose-400 to-rose-500 text-white shadow-[0_8px_16px_rgba(244,63,110,0.4)]'
+                }`}>
                   {request.status}
                 </span>
               </div>
@@ -851,9 +1141,9 @@ const Requests = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Request #{request.id}</h3>
-                  <p className="text-sm text-gray-600">Campaign ID: {request.campaign_id}</p>
-                  <p className="text-sm text-gray-600">Influencer ID: {request.influencer_id}</p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-sm text-gray-600 mt-1">Campaign: {request.campaign_name || `ID ${request.campaign_id}`}</p>
+                  <p className="text-sm text-gray-600">Influencer: {request.influencer_name || `ID ${request.influencer_id}`}</p>
+                  <p className="text-xs text-gray-500 mt-2">
                     Created: {new Date(request.created_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -861,11 +1151,13 @@ const Requests = () => {
             </div>
           ))}
         </div>
-      ) : (
+      )}
+
+      {requests.length === 0 && (
         <EmptyState
           icon="📤"
-          title="No requests sent"
-          message="You haven't sent any collaboration requests yet."
+          title="No requests yet"
+          message="You haven't received any collaboration requests yet. Influencers can apply to your campaigns."
         />
       )}
     </div>

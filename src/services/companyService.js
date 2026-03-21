@@ -130,6 +130,23 @@ class CompanyService {
     
     return response.json()
   }
+
+  async updateRequestStatus(requestId, status) {
+    const response = await apiFetch(`/request/brand/${requestId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status })
+    })
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to update request status' }))
+      throw new Error(error.detail || 'Failed to update request status')
+    }
+    
+    return response.json()
+  }
 }
 
 export default new CompanyService()

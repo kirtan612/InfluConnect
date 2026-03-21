@@ -172,16 +172,12 @@ class InfluencerService {
     return response.json()
   }
 
-  async applyToCampaign(campaignId, influencerId) {
-    const response = await apiFetch('/request', {
+  async applyToCampaign(campaignId) {
+    const response = await apiFetch(`/influencer/apply-campaign/${campaignId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
-        campaign_id: campaignId, 
-        influencer_id: influencerId 
-      })
+      }
     })
     
     if (!response.ok) {

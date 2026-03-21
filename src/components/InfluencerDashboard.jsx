@@ -6,9 +6,15 @@ import Notifications from './Notifications'
 import LoadingSpinner from './LoadingSpinner'
 import ErrorMessage from './ErrorMessage'
 import EmptyState from './EmptyState'
+import AgreementModal from './AgreementModal'
+import DisputeModal from './DisputeModal'
+import ReportModal from './ReportModal'
+import EscrowDashboard from './EscrowDashboard'
+import WalletDisplay from './WalletDisplay'
 import influencerService from '../services/influencerService'
 import collaborationService from '../services/collaborationService'
-import { ChevronLeft, ChevronRight, LogOut, Menu, User, Award, CheckCircle, Target, Briefcase, Mail, Star, Check, Shield, Trophy, Rocket, Gem, Flame, Crown, Clapperboard, TrendingUp, Handshake } from 'lucide-react'
+import { acceptCampaignTerms } from '../services/agreementService'
+import { ChevronLeft, ChevronRight, LogOut, Menu, User, Award, CheckCircle, Target, Briefcase, Mail, Star, Check, Shield, Trophy, Rocket, Gem, Flame, Crown, Clapperboard, TrendingUp, Handshake, AlertTriangle, Flag, Wallet } from 'lucide-react'
 
 const InfluencerDashboard = () => {
   const navigate = useNavigate()
@@ -52,7 +58,8 @@ const InfluencerDashboard = () => {
     { id: 'verification', name: 'Verification', icon: CheckCircle, color: 'text-emerald-500', shadow: 'shadow-[0_2px_8px_rgba(16,185,129,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(16,185,129,0.2)] hover:text-emerald-600' },
     { id: 'campaigns', name: 'Browse Campaigns', icon: Target, color: 'text-rose-500', shadow: 'shadow-[0_2px_8px_rgba(244,63,110,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(244,63,110,0.2)] hover:text-rose-600' },
     { id: 'collaborations', name: 'Collaborations', icon: Briefcase, color: 'text-indigo-500', shadow: 'shadow-[0_2px_8px_rgba(99,102,241,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(99,102,241,0.2)] hover:text-indigo-600' },
-    { id: 'requests', name: 'Requests', icon: Mail, color: 'text-cyan-500', shadow: 'shadow-[0_2px_8px_rgba(6,182,212,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(6,182,212,0.2)] hover:text-cyan-600' }
+    { id: 'requests', name: 'Requests', icon: Mail, color: 'text-cyan-500', shadow: 'shadow-[0_2px_8px_rgba(6,182,212,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(6,182,212,0.2)] hover:text-cyan-600' },
+    { id: 'escrow', name: 'Escrow', icon: Wallet, color: 'text-purple-500', shadow: 'shadow-[0_2px_8px_rgba(168,85,247,0.15)]', hover: 'hover:shadow-[0_4px_12px_rgba(168,85,247,0.2)] hover:text-purple-600' }
   ]
 
 
@@ -132,6 +139,7 @@ const InfluencerDashboard = () => {
             {activeTab === 'campaigns' && <BrowseCampaigns />}
             {activeTab === 'collaborations' && <InfluencerCollaborations />}
             {activeTab === 'requests' && <Requests />}
+            {activeTab === 'escrow' && <EscrowDashboard />}
           </div>
         </main>
       </div>
@@ -195,6 +203,9 @@ const MyProfile = () => {
 
   return (
     <div className="space-y-6">
+      {/* Wallet Display */}
+      <WalletDisplay compact={true} />
+      
       <div className="bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/50 border border-slate-100 p-8 text-slate-800 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 duration-300">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center space-x-6">
@@ -916,7 +927,7 @@ const BrowseCampaigns = () => {
 
     setApplying(campaignId)
     try {
-      await influencerService.applyToCampaign(campaignId, profile.id)
+      await influencerService.applyToCampaign(campaignId)
       alert('Application submitted successfully!')
     } catch (err) {
       setError(err.message)
@@ -991,9 +1002,36 @@ const BrowseCampaigns = () => {
                 </div>
 
                 <div className="space-y-1 text-sm text-gray-600">
-                  {campaign.budget_min && campaign.budget_max && (
+                  {campaign.budget_amount ? (
+                    <div className="bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg p-3 border border-teal-100 space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">Campaign Budget:</span>
+                        <span className="font-semibold text-gray-900">₹{campaign.budget_amount?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">Platform Fee (2.5%):</span>
+                        <span className="font-semibold text-amber-600">₹{campaign.influencer_fee?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs border-t border-teal-200 pt-1">
+                        <span className="font-semibold text-gray-900">You'll Receive:</span>
+                        <span className="font-bold text-green-600">₹{(campaign.budget_amount - campaign.influencer_fee)?.toLocaleString()}</span>
+                      </div>
+                      {campaign.escrow_status && (
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-xs text-gray-600">Escrow:</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            campaign.escrow_status === 'locked' ? 'bg-amber-100 text-amber-700' :
+                            campaign.escrow_status === 'released' ? 'bg-green-100 text-green-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {campaign.escrow_status}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  ) : campaign.budget_min && campaign.budget_max ? (
                     <p><span className="font-medium">Budget:</span> ₹{campaign.budget_min} - ₹{campaign.budget_max}</p>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -1025,6 +1063,11 @@ const Requests = () => {
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('all')
   const [actionLoading, setActionLoading] = useState(null)
+  const [showAgreement, setShowAgreement] = useState(false)
+  const [pendingRequest, setPendingRequest] = useState(null)
+  const [showDispute, setShowDispute] = useState(false)
+  const [showReport, setShowReport] = useState(false)
+  const [selectedCollab, setSelectedCollab] = useState(null)
 
   const fetchRequests = () => {
     setLoading(true)
@@ -1045,10 +1088,33 @@ const Requests = () => {
     fetchRequests()
   }, [])
 
-  const handleUpdateStatus = async (requestId, status) => {
-    setActionLoading(requestId)
+  const handleUpdateStatus = async (request, status) => {
+    if (status === 'accepted') {
+      // Show agreement modal before accepting
+      setPendingRequest(request)
+      setShowAgreement(true)
+    } else {
+      // Reject directly
+      setActionLoading(request.id)
+      try {
+        await influencerService.updateRequestStatus(request.id, status)
+        fetchRequests()
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setActionLoading(null)
+      }
+    }
+  }
+
+  const handleAgreementAccept = async () => {
+    setActionLoading(pendingRequest.id)
     try {
-      await influencerService.updateRequestStatus(requestId, status)
+      // Accept the request directly
+      // No need to accept campaign terms - campaign was already created with terms accepted
+      await influencerService.updateRequestStatus(pendingRequest.id, 'accepted')
+      
+      setPendingRequest(null)
       fetchRequests()
     } catch (err) {
       setError(err.message)
@@ -1124,14 +1190,14 @@ const Requests = () => {
               {request.status === 'pending' && (
                 <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
                   <button
-                    onClick={() => handleUpdateStatus(request.id, 'rejected')}
+                    onClick={() => handleUpdateStatus(request, 'rejected')}
                     disabled={actionLoading === request.id}
                     className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
                   >
                     {actionLoading === request.id ? '...' : 'Reject'}
                   </button>
                   <button
-                    onClick={() => handleUpdateStatus(request.id, 'accepted')}
+                    onClick={() => handleUpdateStatus(request, 'accepted')}
                     disabled={actionLoading === request.id}
                     className="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-600 rounded-lg transition-colors disabled:opacity-50"
                   >
@@ -1142,9 +1208,35 @@ const Requests = () => {
 
               {request.status === 'accepted' && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <div className="flex items-center text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">
-                    <span className="mr-2">✓</span>
-                    <span>You accepted this collaboration request</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+                      <span className="mr-2">✓</span>
+                      <span>You accepted this collaboration request</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedCollab({ id: request.campaign_id, name: request.campaign_name })
+                          setShowDispute(true)
+                        }}
+                        className="px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors flex items-center gap-1"
+                        title="File Dispute"
+                      >
+                        <AlertTriangle size={12} />
+                        Dispute
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedCollab({ id: request.campaign_id, name: request.campaign_name })
+                          setShowReport(true)
+                        }}
+                        className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center gap-1"
+                        title="Report Issue"
+                      >
+                        <Flag size={12} />
+                        Report
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1165,6 +1257,50 @@ const Requests = () => {
           icon="📬"
           title="No requests"
           message={filter === 'all' ? "You haven't received any collaboration requests yet." : `No ${filter} requests found.`}
+        />
+      )}
+
+      {/* Agreement Modal */}
+      {showAgreement && pendingRequest && (
+        <AgreementModal
+          campaign={{ id: pendingRequest.campaign_id, name: pendingRequest.campaign_name, description: 'Collaboration Request' }}
+          userRole="influencer"
+          onClose={() => {
+            setShowAgreement(false)
+            setPendingRequest(null)
+          }}
+          onAccept={handleAgreementAccept}
+        />
+      )}
+
+      {/* Dispute Modal */}
+      {showDispute && selectedCollab && (
+        <DisputeModal
+          campaign={selectedCollab}
+          onClose={() => {
+            setShowDispute(false)
+            setSelectedCollab(null)
+          }}
+          onDisputed={() => {
+            alert('Dispute filed successfully!')
+            fetchRequests()
+          }}
+        />
+      )}
+
+      {/* Report Modal */}
+      {showReport && selectedCollab && (
+        <ReportModal
+          entityType="campaign"
+          entityId={selectedCollab.id}
+          entityName={selectedCollab.name}
+          onClose={() => {
+            setShowReport(false)
+            setSelectedCollab(null)
+          }}
+          onReported={() => {
+            alert('Report submitted successfully!')
+          }}
         />
       )}
     </div>

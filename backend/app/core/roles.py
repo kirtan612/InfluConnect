@@ -46,7 +46,14 @@ class PaymentStatus(str, Enum):
 class CampaignStatus(str, Enum):
     """Campaign status."""
     DRAFT = "draft"
+    PENDING_AGREEMENT = "pending_agreement"
     ACTIVE = "active"
+    SUBMITTED = "submitted"
+    UNDER_REVIEW = "under_review"
+    DISPUTE = "dispute"
+    ADMIN_REVIEW = "admin_review"
+    COMPLETED = "completed"
+    REJECTED = "rejected"
     DISABLED = "disabled"
 
 

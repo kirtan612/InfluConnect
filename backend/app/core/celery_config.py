@@ -1,6 +1,7 @@
 """
 Celery configuration for InfluConnect background tasks.
 """
+import sys
 from celery import Celery
 from celery.schedules import crontab
 from app.core.config import settings
@@ -28,6 +29,12 @@ celery_app.conf.update(
     # Worker settings
     worker_prefetch_multiplier=1,
     task_acks_late=True,
+    
+    # Windows compatibility - use solo pool instead of prefork
+    worker_pool='solo' if sys.platform == 'win32' else 'prefork',
+    
+    # Connection retry settings for Celery 6.0 compatibility
+    broker_connection_retry_on_startup=True,
     
     # Beat schedule for automated tasks
     beat_schedule={

@@ -17,6 +17,8 @@ from app.db.models.campaign import Campaign
 from app.db.models.request import CollaborationRequest
 from app.db.models.verification import VerificationRequest
 from app.db.models.report import Report
+from app.db.models.platform_revenue import PlatformRevenue
+from app.db.models.wallet import Wallet
 from app.core.dependencies import get_admin_user
 from app.core.roles import VerificationStatus, CampaignStatus, BrandStatus
 from app.schemas.admin import (
@@ -29,6 +31,11 @@ from app.schemas.admin import (
     AdminCampaignResponse,
     AdminVerificationResponse,
     AdminVerificationDecision,
+)
+from app.schemas.campaign import (
+    PlatformRevenueResponse,
+    PlatformRevenueStats,
+    AdminEscrowStats
 )
 from app.services.automation import AutomationService
 
@@ -257,7 +264,7 @@ async def approve_verification(
     if not vr:
         raise HTTPException(status_code=404, detail="Verification request not found")
 
-    vr.status = "approved"
+    vr.status = VerificationStatus.VERIFIED  # Use enum instead of string
     vr.reviewed_at = datetime.utcnow()
 
     # Update influencer profile
@@ -285,7 +292,7 @@ async def reject_verification(
     if not vr:
         raise HTTPException(status_code=404, detail="Verification request not found")
 
-    vr.status = "rejected"
+    vr.status = VerificationStatus.REJECTED  # Use enum instead of string
     vr.reviewed_at = datetime.utcnow()
 
     # Update influencer profile
@@ -362,3 +369,150 @@ async def trigger_automation(
         return {"message": "Profile completion updated", "details": result}
     else:
         raise HTTPException(status_code=400, detail=f"Unknown task: {task}")
+
+
+# ============================================================================
+# Platform Revenue & Escrow Management
+# ============================================================================
+
+@router.get("/platform-revenue", response_model=PlatformRevenueStats)
+async def get_platform_revenue(
+    current_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get platform revenue statistics.
+    Shows total earnings from brand and influencer fees.
+    """
+    # Get all revenue records
+    revenues = db.query(PlatformRevenue).all()
+    
+    total_revenue = sum(r.total_fee for r in revenues)
+    brand_fees_total = sum(r.brand_fee for r in revenues)
+    influencer_fees_total = sum(r.influencer_fee for r in revenues)
+    total_campaigns = db.query(Campaign).filter(Campaign.budget_amount.isnot(None)).count()
+    
+    # Revenue by campaign
+    revenue_by_campaign = []
+    campaigns_with_revenue = db.query(Campaign).filter(
+        Campaign.budget_amount.isnot(None)
+    ).all()
+    
+    for campaign in campaigns_with_revenue:
+        campaign_revenues = db.query(PlatformRevenue).filter(
+            PlatformRevenue.campaign_id == campaign.id
+        ).all()
+        
+        campaign_total = sum(r.total_fee for r in campaign_revenues)
+        
+        revenue_by_campaign.append({
+            "campaign_id": campaign.id,
+            "campaign_name": campaign.name,
+            "brand_fee": float(campaign.brand_fee or 0),
+            "influencer_fee": float(campaign.influencer_fee or 0),
+            "total_collected": campaign_total,
+            "escrow_status": campaign.escrow_status
+        })
+    
+    return PlatformRevenueStats(
+        total_revenue=total_revenue,
+        brand_fees_total=brand_fees_total,
+        influencer_fees_total=influencer_fees_total,
+        total_campaigns=total_campaigns,
+        revenue_by_campaign=revenue_by_campaign
+    )
+
+
+@router.get("/escrow-overview", response_model=AdminEscrowStats)
+async def get_escrow_overview(
+    current_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get complete escrow system overview.
+    Shows all locked funds, campaigns, and revenue.
+    """
+    # Calculate total locked funds across all users
+    wallets = db.query(Wallet).all()
+    total_locked_funds = sum(w.locked_balance for w in wallets)
+    
+    # Count campaigns with escrow
+    total_campaigns_with_escrow = db.query(Campaign).filter(
+        Campaign.budget_amount.isnot(None)
+    ).count()
+    
+    # Campaigns by escrow status
+    campaigns_by_status = db.query(
+        Campaign.escrow_status,
+        func.count(Campaign.id)
+    ).filter(
+        Campaign.escrow_status.isnot(None)
+    ).group_by(Campaign.escrow_status).all()
+    
+    campaigns_by_escrow_status = {
+        status: count for status, count in campaigns_by_status
+    }
+    
+    # Get platform revenue stats
+    revenues = db.query(PlatformRevenue).all()
+    total_revenue = sum(r.total_fee for r in revenues)
+    brand_fees_total = sum(r.brand_fee for r in revenues)
+    influencer_fees_total = sum(r.influencer_fee for r in revenues)
+    
+    # Revenue by campaign
+    revenue_by_campaign = []
+    campaigns_with_revenue = db.query(Campaign).filter(
+        Campaign.budget_amount.isnot(None)
+    ).order_by(Campaign.created_at.desc()).limit(10).all()
+    
+    for campaign in campaigns_with_revenue:
+        campaign_revenues = db.query(PlatformRevenue).filter(
+            PlatformRevenue.campaign_id == campaign.id
+        ).all()
+        
+        campaign_total = sum(r.total_fee for r in campaign_revenues)
+        
+        revenue_by_campaign.append({
+            "campaign_id": campaign.id,
+            "campaign_name": campaign.name,
+            "brand_fee": float(campaign.brand_fee or 0),
+            "influencer_fee": float(campaign.influencer_fee or 0),
+            "total_collected": campaign_total,
+            "escrow_status": campaign.escrow_status
+        })
+    
+    platform_revenue = PlatformRevenueStats(
+        total_revenue=total_revenue,
+        brand_fees_total=brand_fees_total,
+        influencer_fees_total=influencer_fees_total,
+        total_campaigns=total_campaigns_with_escrow,
+        revenue_by_campaign=revenue_by_campaign
+    )
+    
+    # Recent transactions
+    recent_transactions = []
+    recent_campaigns = db.query(Campaign).filter(
+        Campaign.escrow_status.in_(['locked', 'released', 'refunded'])
+    ).order_by(Campaign.funds_locked_at.desc()).limit(20).all()
+    
+    for campaign in recent_campaigns:
+        brand = db.query(BrandProfile).filter(BrandProfile.id == campaign.brand_id).first()
+        
+        recent_transactions.append({
+            "campaign_id": campaign.id,
+            "campaign_name": campaign.name,
+            "brand_name": brand.company_name if brand else "Unknown",
+            "budget_amount": float(campaign.budget_amount or 0),
+            "total_payment": float(campaign.total_payment or 0),
+            "escrow_status": campaign.escrow_status,
+            "locked_at": campaign.funds_locked_at,
+            "released_at": campaign.funds_released_at
+        })
+    
+    return AdminEscrowStats(
+        total_locked_funds=total_locked_funds,
+        total_campaigns_with_escrow=total_campaigns_with_escrow,
+        campaigns_by_escrow_status=campaigns_by_escrow_status,
+        platform_revenue=platform_revenue,
+        recent_transactions=recent_transactions
+    )

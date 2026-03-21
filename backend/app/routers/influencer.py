@@ -201,7 +201,7 @@ def _auto_evaluate_verification(verification_id: int):
     db = SessionLocal()
     try:
         vr = db.query(VerificationRequest).filter(VerificationRequest.id == verification_id).first()
-        if not vr or vr.status != "pending":
+        if not vr or vr.status != VerificationStatus.PENDING:
             return
 
         metrics = vr.metrics_snapshot or {}
@@ -210,7 +210,7 @@ def _auto_evaluate_verification(verification_id: int):
 
         # Simple auto-approval: followers > 1000 AND engagement > 2%
         if followers > 1000 and engagement > 2.0:
-            vr.status = "approved"
+            vr.status = VerificationStatus.VERIFIED  # Use enum instead of string
             vr.reviewed_at = datetime.utcnow()
 
             profile = db.query(InfluencerProfile).filter(
@@ -313,3 +313,85 @@ async def get_influencer_requests(
         })
 
     return result
+
+
+# ============================================================================
+# Apply to Campaign endpoint (for influencer)
+# ============================================================================
+
+@router.post("/apply-campaign/{campaign_id}")
+async def apply_to_campaign(
+    campaign_id: int,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_influencer_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Influencer applies to a campaign.
+    Creates a collaboration request and notifies the brand.
+    """
+    from app.db.models.campaign import Campaign
+    from app.db.models.brand import BrandProfile
+    from app.core.roles import CollaborationRequestStatus
+    from app.services.notification_service import create_notification, send_notification_email, NotificationType
+    
+    profile = get_influencer_profile(db, current_user)
+    
+    # Check if campaign exists
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    
+    # Check if already applied
+    existing = db.query(CollaborationRequest).filter(
+        CollaborationRequest.campaign_id == campaign_id,
+        CollaborationRequest.influencer_id == profile.id
+    ).first()
+    
+    if existing:
+        status_text = existing.status.value if hasattr(existing.status, 'value') else str(existing.status)
+        raise HTTPException(
+            status_code=400,
+            detail=f"You have already applied to this campaign (status: {status_text})"
+        )
+    
+    # Create collaboration request
+    request = CollaborationRequest(
+        campaign_id=campaign_id,
+        influencer_id=profile.id,
+        status=CollaborationRequestStatus.PENDING,
+        created_at=datetime.utcnow()
+    )
+    
+    db.add(request)
+    db.commit()
+    db.refresh(request)
+    
+    # Get brand details for notification
+    brand = db.query(BrandProfile).filter(BrandProfile.id == campaign.brand_id).first()
+    if brand:
+        brand_user = db.query(User).filter(User.id == brand.user_id).first()
+        if brand_user:
+            # Create in-app notification
+            create_notification(
+                db=db,
+                user_id=brand_user.id,
+                message=f"{profile.display_name or 'An influencer'} applied to your campaign '{campaign.name}'",
+                notification_type=NotificationType.REQUEST_SENT,
+                related_id=campaign.id
+            )
+            
+            # Send email notification to brand
+            background_tasks.add_task(
+                send_notification_email,
+                to_email=brand_user.email,
+                subject=f"New Application for '{campaign.name}'",
+                message=f"{profile.display_name or 'An influencer'} has applied to your campaign '{campaign.name}'. Please review their profile and respond to the request.",
+                action_url="http://localhost:5173/company/requests"
+            )
+    
+    return {
+        "message": "Application submitted successfully",
+        "request_id": request.id,
+        "status": "pending"
+    }

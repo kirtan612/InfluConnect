@@ -302,6 +302,134 @@ def update_request_status(
     return collab_request
 
 
+@router.put("/brand/{request_id}", response_model=CollaborationRequestResponse)
+def brand_update_request_status(
+    request_id: int,
+    data: CollaborationRequestUpdate,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_brand_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Brand accepts/rejects incoming collaboration request (application).
+    This is for when influencers apply to campaigns.
+    """
+    collab_request = db.query(CollaborationRequest).filter(
+        CollaborationRequest.id == request_id
+    ).first()
+    
+    if not collab_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found"
+        )
+    
+    # Check brand owns the campaign
+    campaign = db.query(Campaign).filter(Campaign.id == collab_request.campaign_id).first()
+    if not campaign:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign not found"
+        )
+    
+    brand = db.query(BrandProfile).filter(BrandProfile.user_id == current_user.id).first()
+    if not brand or campaign.brand_id != brand.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Can only respond to requests for your own campaigns"
+        )
+    
+    # Can only update if pending
+    if collab_request.status != CollaborationRequestStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can only respond to pending requests"
+        )
+    
+    # Update status
+    collab_request.status = data.status
+    db.commit()
+    db.refresh(collab_request)
+    
+    # Get influencer details for notifications
+    influencer = db.query(InfluencerProfile).filter(
+        InfluencerProfile.id == collab_request.influencer_id
+    ).first()
+    influencer_user = db.query(User).filter(User.id == influencer.user_id).first() if influencer else None
+    
+    # If accepted, create collaboration and send notifications
+    if data.status == CollaborationRequestStatus.ACCEPTED:
+        from app.db.models.collaboration import Collaboration
+        from app.core.roles import CollaborationStatus, PaymentStatus
+        
+        # Create collaboration record
+        collaboration = Collaboration(
+            request_id=collab_request.id,
+            campaign_id=collab_request.campaign_id,
+            influencer_id=collab_request.influencer_id,
+            brand_id=campaign.brand_id,
+            status=CollaborationStatus.ACTIVE,
+            payment_status=PaymentStatus.PENDING
+        )
+        db.add(collaboration)
+        db.commit()
+        
+        # Notify influencer
+        if influencer_user:
+            create_notification(
+                db=db,
+                user_id=influencer_user.id,
+                message=f"Your application for '{campaign.name}' has been accepted!",
+                notification_type=NotificationType.REQUEST_ACCEPTED,
+                related_id=collaboration.id
+            )
+            
+            # Send email to influencer
+            background_tasks.add_task(
+                send_notification_email,
+                to_email=influencer_user.email,
+                subject="Application Accepted",
+                message=f"Great news! Your application for '{campaign.name}' has been accepted by {brand.company_name or 'the brand'}. The collaboration is now active.",
+                action_url="http://localhost:5173/dashboard"
+            )
+        
+        # Notify brand
+        create_notification(
+            db=db,
+            user_id=current_user.id,
+            message=f"You accepted the application from {influencer.display_name or 'an influencer'} for '{campaign.name}'",
+            notification_type=NotificationType.REQUEST_ACCEPTED,
+            related_id=collaboration.id
+        )
+        
+        # Update trust score
+        if influencer:
+            from app.services.trust_engine import TrustEngine
+            TrustEngine.update_trust_score(influencer.id, db)
+    
+    elif data.status == CollaborationRequestStatus.REJECTED:
+        # Notify influencer of rejection
+        if influencer_user:
+            create_notification(
+                db=db,
+                user_id=influencer_user.id,
+                message=f"Your application for '{campaign.name}' was declined",
+                notification_type=NotificationType.REQUEST_REJECTED,
+                related_id=campaign.id
+            )
+            
+            # Send email to influencer
+            background_tasks.add_task(
+                send_notification_email,
+                to_email=influencer_user.email,
+                subject="Application Status Update",
+                message=f"Thank you for your interest in '{campaign.name}'. Unfortunately, your application was not selected at this time.",
+                action_url="http://localhost:5173/dashboard"
+            )
+    
+    return collab_request
+
+
 @router.get("/influencer/search", response_model=List[InfluencerListResponse])
 def search_influencers(
     current_user: User = Depends(get_brand_user),

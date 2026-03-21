@@ -12,6 +12,9 @@ from app.db.models.verification import VerificationRequest
 from app.db.models.report import Report
 from app.db.models.achievement import Achievement
 from app.db.models.notification import Notification
+from app.db.models.wallet import Wallet
+from app.db.models.transaction import Transaction
+from app.db.models.platform_revenue import PlatformRevenue
 
 __all__ = [
     "User",
@@ -24,4 +27,7 @@ __all__ = [
     "Report",
     "Achievement",
     "Notification",
+    "Wallet",
+    "Transaction",
+    "PlatformRevenue",
 ]

@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from app.db.init_db import init_db
-from app.routers import auth, influencer, brand, campaign, request, admin, upload, collaboration, notification, automation
+from app.routers import auth, influencer, brand, campaign, request, admin, upload, collaboration, notification, automation, agreement_dispute, report, escrow, wallet
 
 # Initialize database tables
 init_db()
@@ -55,6 +55,10 @@ app.include_router(notification.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(automation.router, prefix="/api")
+app.include_router(agreement_dispute.router, prefix="/api")
+app.include_router(report.router, prefix="/api")
+app.include_router(escrow.router, prefix="/api")
+app.include_router(wallet.router, prefix="/api")
 
 # ============================================================================
 # Global exception handler

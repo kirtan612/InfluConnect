@@ -1,0 +1,489 @@
+"""
+Collaboration Request router - Requests, search influencers, request management.
+"""
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
+from sqlalchemy.orm import Session
+
+from app.core.roles import UserRole, CollaborationRequestStatus
+from app.core.dependencies import get_current_user
+from app.db.session import get_db
+from app.db.models.user import User
+from app.db.models.brand import BrandProfile
+from app.db.models.influencer import InfluencerProfile
+from app.db.models.request import CollaborationRequest
+from app.db.models.campaign import Campaign
+from app.schemas.request import (
+    CollaborationRequestCreate, CollaborationRequestUpdate,
+    CollaborationRequestResponse, CollaborationRequestWithDetails
+)
+from app.schemas.influencer import InfluencerListResponse
+from app.utils.permissions import (
+    check_influencer_can_receive_requests,
+    check_campaign_access,
+    check_brand_access_to_request
+)
+from app.services.notification_service import (
+    create_notification,
+    send_notification_email,
+    NotificationType
+)
+
+
+router = APIRouter(prefix="/request", tags=["request"])
+
+
+def get_brand_user(current_user: User = Depends(get_current_user)) -> User:
+    """Ensure user is a brand."""
+    if current_user.role != UserRole.BRAND:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for brands only"
+        )
+    return current_user
+
+
+def get_influencer_user(current_user: User = Depends(get_current_user)) -> User:
+    """Ensure user is an influencer."""
+    if current_user.role != UserRole.INFLUENCER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint is for influencers only"
+        )
+    return current_user
+
+
+@router.post("", response_model=CollaborationRequestResponse)
+def create_request(
+    data: CollaborationRequestCreate,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_brand_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a collaboration request.
+    Brand sends request to influencer for a campaign.
+    
+    Business Rules:
+    - Influencer must be verified
+    - Campaign must belong to the brand
+    """
+    # Check campaign access
+    check_campaign_access(current_user, data.campaign_id, db)
+    
+    # Check influencer can receive requests
+    check_influencer_can_receive_requests(data.influencer_id, db)
+    
+    # Check if request already exists (prevent duplicate requests to same influencer)
+    existing = db.query(CollaborationRequest).filter(
+        CollaborationRequest.campaign_id == data.campaign_id,
+        CollaborationRequest.influencer_id == data.influencer_id
+    ).first()
+    
+    if existing:
+        status_text = existing.status.value if hasattr(existing.status, 'value') else str(existing.status)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"A collaboration request already exists for this influencer (status: {status_text}). You can send requests to other influencers for this campaign."
+        )
+    
+    # Create request
+    db_request = CollaborationRequest(
+        campaign_id=data.campaign_id,
+        influencer_id=data.influencer_id,
+        status=CollaborationRequestStatus.PENDING
+    )
+    
+    db.add(db_request)
+    db.commit()
+    db.refresh(db_request)
+    
+    # Get campaign and influencer details for notification
+    campaign = db.query(Campaign).filter(Campaign.id == data.campaign_id).first()
+    influencer = db.query(InfluencerProfile).filter(InfluencerProfile.id == data.influencer_id).first()
+    
+    if influencer and campaign:
+        # Create in-app notification for influencer
+        influencer_user = db.query(User).filter(User.id == influencer.user_id).first()
+        if influencer_user:
+            create_notification(
+                db=db,
+                user_id=influencer_user.id,
+                message=f"New collaboration request for campaign: {campaign.name}",
+                notification_type=NotificationType.REQUEST_SENT,
+                related_id=campaign.id
+            )
+            
+            # Send email notification
+            background_tasks.add_task(
+                send_notification_email,
+                to_email=influencer_user.email,
+                subject="New Collaboration Request",
+                message=f"You have received a new collaboration request for the campaign '{campaign.name}'.",
+                action_url="http://localhost:5173/dashboard"
+            )
+    
+    return db_request
+
+
+@router.get("/{request_id}", response_model=CollaborationRequestWithDetails)
+def get_request(
+    request_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get collaboration request details.
+    """
+    collab_request = db.query(CollaborationRequest).filter(
+        CollaborationRequest.id == request_id
+    ).first()
+    
+    if not collab_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found"
+        )
+    
+    # Check access based on role
+    if current_user.role == UserRole.BRAND:
+        check_brand_access_to_request(current_user, request_id, db)
+    elif current_user.role == UserRole.INFLUENCER:
+        influencer = db.query(InfluencerProfile).filter(
+            InfluencerProfile.user_id == current_user.id
+        ).first()
+        if not influencer or collab_request.influencer_id != influencer.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+    
+    # Get related data
+    campaign = db.query(Campaign).filter(
+        Campaign.id == collab_request.campaign_id
+    ).first()
+    
+    influencer = db.query(InfluencerProfile).filter(
+        InfluencerProfile.id == collab_request.influencer_id
+    ).first()
+    
+    return CollaborationRequestWithDetails(
+        id=collab_request.id,
+        campaign_id=collab_request.campaign_id,
+        influencer_id=collab_request.influencer_id,
+        status=collab_request.status,
+        created_at=collab_request.created_at,
+        updated_at=collab_request.updated_at,
+        campaign_name=campaign.name if campaign else "Unknown",
+        influencer_display_name=influencer.display_name if influencer else None,
+        influencer_trust_score=influencer.trust_score if influencer else 0
+    )
+
+
+@router.put("/{request_id}", response_model=CollaborationRequestResponse)
+def update_request_status(
+    request_id: int,
+    data: CollaborationRequestUpdate,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_influencer_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update collaboration request status (accept/reject).
+    Only influencers can accept/reject requests.
+    """
+    collab_request = db.query(CollaborationRequest).filter(
+        CollaborationRequest.id == request_id
+    ).first()
+    
+    if not collab_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found"
+        )
+    
+    # Check influencer owns this request
+    influencer = db.query(InfluencerProfile).filter(
+        InfluencerProfile.user_id == current_user.id
+    ).first()
+    
+    if not influencer or collab_request.influencer_id != influencer.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Can only respond to requests sent to you"
+        )
+    
+    # Can only update if pending
+    if collab_request.status != CollaborationRequestStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can only respond to pending requests"
+        )
+    
+    # Update status
+    collab_request.status = data.status
+    db.commit()
+    db.refresh(collab_request)
+    
+    # Get campaign and brand details for notifications
+    campaign = db.query(Campaign).filter(Campaign.id == collab_request.campaign_id).first()
+    brand = db.query(BrandProfile).filter(BrandProfile.id == campaign.brand_id).first() if campaign else None
+    brand_user = db.query(User).filter(User.id == brand.user_id).first() if brand else None
+    
+    # If accepted, create collaboration and send notifications
+    if data.status == CollaborationRequestStatus.ACCEPTED:
+        from app.db.models.collaboration import Collaboration
+        from app.core.roles import CollaborationStatus, PaymentStatus
+        
+        # Create collaboration record
+        collaboration = Collaboration(
+            request_id=collab_request.id,
+            campaign_id=collab_request.campaign_id,
+            influencer_id=collab_request.influencer_id,
+            brand_id=campaign.brand_id if campaign else None,
+            status=CollaborationStatus.ACTIVE,
+            payment_status=PaymentStatus.PENDING
+        )
+        db.add(collaboration)
+        db.commit()
+        
+        # Notify brand
+        if brand_user:
+            create_notification(
+                db=db,
+                user_id=brand_user.id,
+                message=f"Your collaboration request for '{campaign.name}' has been accepted!",
+                notification_type=NotificationType.REQUEST_ACCEPTED,
+                related_id=collaboration.id
+            )
+            
+            # Send email to brand
+            background_tasks.add_task(
+                send_notification_email,
+                to_email=brand_user.email,
+                subject="Collaboration Request Accepted",
+                message=f"Great news! Your collaboration request for '{campaign.name}' has been accepted by {influencer.display_name or 'an influencer'}.",
+                action_url="http://localhost:5173/dashboard"
+            )
+        
+        # Notify influencer
+        create_notification(
+            db=db,
+            user_id=current_user.id,
+            message=f"You accepted the collaboration request for '{campaign.name}'",
+            notification_type=NotificationType.REQUEST_ACCEPTED,
+            related_id=collaboration.id
+        )
+        
+        # Send email to influencer
+        background_tasks.add_task(
+            send_notification_email,
+            to_email=current_user.email,
+            subject="Collaboration Started",
+            message=f"You have successfully accepted the collaboration request for '{campaign.name}'. The collaboration is now active.",
+            action_url="http://localhost:5173/dashboard"
+        )
+        
+        # Update trust score
+        from app.services.trust_engine import TrustEngine
+        TrustEngine.update_trust_score(influencer.id, db)
+    
+    elif data.status == CollaborationRequestStatus.REJECTED:
+        # Notify brand of rejection
+        if brand_user:
+            create_notification(
+                db=db,
+                user_id=brand_user.id,
+                message=f"Your collaboration request for '{campaign.name}' was declined",
+                notification_type=NotificationType.REQUEST_REJECTED,
+                related_id=campaign.id
+            )
+    
+    return collab_request
+
+
+@router.put("/brand/{request_id}", response_model=CollaborationRequestResponse)
+def brand_update_request_status(
+    request_id: int,
+    data: CollaborationRequestUpdate,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_brand_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Brand accepts/rejects incoming collaboration request (application).
+    This is for when influencers apply to campaigns.
+    """
+    collab_request = db.query(CollaborationRequest).filter(
+        CollaborationRequest.id == request_id
+    ).first()
+    
+    if not collab_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found"
+        )
+    
+    # Check brand owns the campaign
+    campaign = db.query(Campaign).filter(Campaign.id == collab_request.campaign_id).first()
+    if not campaign:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign not found"
+        )
+    
+    brand = db.query(BrandProfile).filter(BrandProfile.user_id == current_user.id).first()
+    if not brand or campaign.brand_id != brand.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Can only respond to requests for your own campaigns"
+        )
+    
+    # Can only update if pending
+    if collab_request.status != CollaborationRequestStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can only respond to pending requests"
+        )
+    
+    # Update status
+    collab_request.status = data.status
+    db.commit()
+    db.refresh(collab_request)
+    
+    # Get influencer details for notifications
+    influencer = db.query(InfluencerProfile).filter(
+        InfluencerProfile.id == collab_request.influencer_id
+    ).first()
+    influencer_user = db.query(User).filter(User.id == influencer.user_id).first() if influencer else None
+    
+    # If accepted, create collaboration and send notifications
+    if data.status == CollaborationRequestStatus.ACCEPTED:
+        from app.db.models.collaboration import Collaboration
+        from app.core.roles import CollaborationStatus, PaymentStatus
+        
+        # Create collaboration record
+        collaboration = Collaboration(
+            request_id=collab_request.id,
+            campaign_id=collab_request.campaign_id,
+            influencer_id=collab_request.influencer_id,
+            brand_id=campaign.brand_id,
+            status=CollaborationStatus.ACTIVE,
+            payment_status=PaymentStatus.PENDING
+        )
+        db.add(collaboration)
+        db.commit()
+        
+        # Notify influencer
+        if influencer_user:
+            create_notification(
+                db=db,
+                user_id=influencer_user.id,
+                message=f"Your application for '{campaign.name}' has been accepted!",
+                notification_type=NotificationType.REQUEST_ACCEPTED,
+                related_id=collaboration.id
+            )
+            
+            # Send email to influencer
+            background_tasks.add_task(
+                send_notification_email,
+                to_email=influencer_user.email,
+                subject="Application Accepted",
+                message=f"Great news! Your application for '{campaign.name}' has been accepted by {brand.company_name or 'the brand'}. The collaboration is now active.",
+                action_url="http://localhost:5173/dashboard"
+            )
+        
+        # Notify brand
+        create_notification(
+            db=db,
+            user_id=current_user.id,
+            message=f"You accepted the application from {influencer.display_name or 'an influencer'} for '{campaign.name}'",
+            notification_type=NotificationType.REQUEST_ACCEPTED,
+            related_id=collaboration.id
+        )
+        
+        # Update trust score
+        if influencer:
+            from app.services.trust_engine import TrustEngine
+            TrustEngine.update_trust_score(influencer.id, db)
+    
+    elif data.status == CollaborationRequestStatus.REJECTED:
+        # Notify influencer of rejection
+        if influencer_user:
+            create_notification(
+                db=db,
+                user_id=influencer_user.id,
+                message=f"Your application for '{campaign.name}' was declined",
+                notification_type=NotificationType.REQUEST_REJECTED,
+                related_id=campaign.id
+            )
+            
+            # Send email to influencer
+            background_tasks.add_task(
+                send_notification_email,
+                to_email=influencer_user.email,
+                subject="Application Status Update",
+                message=f"Thank you for your interest in '{campaign.name}'. Unfortunately, your application was not selected at this time.",
+                action_url="http://localhost:5173/dashboard"
+            )
+    
+    return collab_request
+
+
+@router.get("/influencer/search", response_model=List[InfluencerListResponse])
+def search_influencers(
+    current_user: User = Depends(get_brand_user),
+    db: Session = Depends(get_db),
+    category: str = Query(None, description="Filter by category"),
+    min_trust_score: float = Query(0, ge=0, le=100),
+    verified_only: bool = Query(False)
+):
+    """
+    Search for influencers.
+    Brand can filter by category, minimum trust score, and verification status.
+    """
+    query = db.query(InfluencerProfile)
+    
+    if category:
+        query = query.filter(InfluencerProfile.category == category)
+    
+    query = query.filter(InfluencerProfile.trust_score >= min_trust_score)
+    
+    if verified_only:
+        from app.core.roles import VerificationStatus
+        query = query.filter(
+            InfluencerProfile.verification_status == VerificationStatus.VERIFIED
+        )
+    
+    influencers = query.all()
+    return influencers
+
+
+@router.get("", response_model=List[CollaborationRequestResponse])
+def list_requests(
+    current_user: User = Depends(get_brand_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List all collaboration requests for brand's campaigns.
+    """
+    brand = db.query(BrandProfile).filter(
+        BrandProfile.user_id == current_user.id
+    ).first()
+    
+    if not brand:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Brand profile not found"
+        )
+    
+    # Get all campaigns for this brand
+    campaigns = db.query(Campaign).filter(Campaign.brand_id == brand.id).all()
+    campaign_ids = [c.id for c in campaigns]
+    
+    # Get all requests for these campaigns
+    requests = db.query(CollaborationRequest).filter(
+        CollaborationRequest.campaign_id.in_(campaign_ids)
+    ).all()
+    
+    return requests
